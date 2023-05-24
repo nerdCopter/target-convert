@@ -15,27 +15,30 @@ if ! [ $# -eq 2 ]  2>/dev/null; then
     exit
 fi
 
-if [[ ! $( which grep ) ]] ; then 
+if [[ ! $( which grep ) ]] ; then
     echo 'please install: grep'
     exit 1
 fi
-if [[ ! $( which awk ) ]] ; then 
+if [[ ! $( which awk ) ]] ; then
     echo 'please install: awk'
     exit 1
 fi
-if [[ ! $( which sed ) ]] ; then 
+if [[ ! $( which sed ) ]] ; then
     echo 'please install: sed'
     exit 1
 fi
-if [[ ! $( which wc ) ]] ; then 
+if [[ ! $( which wc ) ]] ; then
     echo 'please install: wc'
     exit 1
 fi
-if [[ ! $( which expr ) ]] ; then 
+if [[ ! $( which expr ) ]] ; then
     echo 'please install: expr'
     exit 1
 fi
-
+if [[ ! $( which xargs ) ]] ; then
+    echo 'please install: xargs'
+    exit 1
+fi
 
 license='/*
  * This file is part of EmuFlight. It is derived from Betaflight.
@@ -227,17 +230,31 @@ echo '#include "drivers/timer.h"' >> ${cFile}
 echo '#include "drivers/timer_def.h"' >> ${cFile}
 echo ''  >> ${cFile}
 echo 'const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {' >> ${cFile}
-
-echo "not converting: target.c needs user translation from unified-targets currently. will need to reference associated unified-target."
-grep "MOTOR[0-9]_PIN" $source
-grep TIMER_PIN_MAP $source
-
 echo '/* notice - incomplete */'  >> ${cFile}
+echo '// format : DEF_TIM(TIMxx, CHx, Pxx, TIM_USE_xxxxxxx, x, x), //comment' >> ${cFile}
+echo '};' >> ${cFile}
+echo '' >> ${cFile}
 
-echo '};'  >> ${cFile}
+echo "not converting timers: target.c needs user translation from unified-targets currently. will need to reference associated unified-target."
+
+echo '// TIM_USE options:' >> ${cFile}
+echo '// TIM_USE_ANY' >> ${cFile}
+echo '// TIM_USE_BEEPER' >> ${cFile}
+echo '// TIM_USE_LED' >> ${cFile}
+echo '// TIM_USE_MOTOR' >> ${cFile}
+echo '// TIM_USE_NONE' >> ${cFile}
+echo '// TIM_USE_PPM' >> ${cFile}
+echo '// TIM_USE_PWM' >> ${cFile}
+echo '// TIM_USE_SERVO' >> ${cFile}
+echo '// TIM_USE_TRANSPONDER' >> ${cFile}
+echo '' >> ${cFile}
+echo '// config.h resources:' >> ${cFile}
+grep "MOTOR[[:digit:]]\+_PIN" $source | xargs -d'\n' --replace echo "// {}" >> ${cFile}
+grep TIMER_PIN_MAP $source | xargs -d'\n' --replace echo "// {}" >> ${cFile}
 
 echo '' >> ${cFile}
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${cFile}
+echo '// recommend converting timers from unified-target; however, unified-targets will be sunsetted.' >> ${cFile}
 
 # create target.h file
 
@@ -251,15 +268,20 @@ translate BOARD_NAME $source "#define USBD_PRODUCT_STRING \"$(grep BOARD_NAME $s
 echo '' >> ${hFile}
 
 # all the USE_ includes acc, gyro, flash, max, etc
-echo '#define USE_VCP'  >> ${hFile}
 grep USE_ $source >> ${hFile}
+echo '' >> ${hFile}
+echo '#define USE_VCP'  >> ${hFile}
+if [[ $(grep USE_FLASH $source) ]] ; then
+    echo '#define USE_FLASHFS' >> ${hFile}
+fi
 echo '' >> ${hFile}
 
 # led
 if [[ $(grep LED[0-9]_PIN $source) ]] ; then
     echo '#define USE_LED' >> ${hFile}
 fi
-grep LED[0-9]_PIN $source >> ${hFile}
+grep "LED[0-9]_PIN" $source >> ${hFile}
+grep LED_STRIP_PIN $source >> ${hFile}
 
 # beeper cam-control
 grep USE_BEEPER $source >> ${hFile}
@@ -362,7 +384,7 @@ if [[ $(grep SPI_ICM42688P $source) ]] ; then
     echo '' >> ${hFile}
 fi
 
-# BMI3270
+# BMI270
 #define USE_ACCGYRO_BMI270
 #define USE_SPI_GYRO    
 if [[ $(grep ACCGYRO_BMI270 $source) ]] ; then
@@ -440,10 +462,6 @@ echo '// notice - should verify serial count.' >> ${hFile}
 echo '' >> ${hFile}
 
 ## adc, default voltage/current, scale
-# translate config.h
-#define ADC1_DMA_OPT        1
-# to Emu
-#define ADC1_DMA_STREAM         DMA2_Stream0
 translate "ADC_VBAT_PIN" $source "#define VBAT_ADC_PIN $(grep "ADC_VBAT_PIN" $source | awk '{print          $3}')" ${hFile}
 translate "ADC_CURR_PIN" $source "#define CURRENT_METER_ADC_PIN $(grep "ADC_CURR_PIN" $source | awk '{print          $3}')" ${hFile}
 translate "ADC_RSSI_PIN" $source "#define RSSI_ADC_PIN $(grep "ADC_RSSI_PIN" $source | awk '{print          $3}')" ${hFile}
@@ -460,10 +478,6 @@ echo '' >> ${hFile}
 translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_ON" $source "#define ENABLE_DSHOT_DMAR true" ${hFile}
 
 ## esc serial timer
-# translate #config.h
-#define ESCSERIAL_PIN        PA3
-# to Emu
-#define ESCSERIAL_TIMER_TX_PIN PA3
 translate "ESCSERIAL_PIN" $source "#define ESCSERIAL_TIMER_TX_PIN $(grep "ESCSERIAL_PIN" $source | awk '{print          $3}')" ${hFile}
 
 echo '' >> ${hFile}
