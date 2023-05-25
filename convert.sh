@@ -311,10 +311,17 @@ done
 echo '' >> ${hFile}
 
 grep -w GYRO_1_ALIGN $source >> ${hFile}  # -w avoid _ALIGN_YAW
+echo 'ACC_1_ALIGN GYRO_1_ALIGN' >> ${hFile}
 grep GYRO_1_CS_PIN $source >> ${hFile}
 grep GYRO_1_EXTI_PIN $source >> ${hFile}
 grep GYRO_1_SPI_INSTANCE $source >> ${hFile}
+echo '' >> ${hFile}
+
 grep -w GYRO_2_ALIGN $source >> ${hFile}  # -w avoid _ALIGN_YAW
+# dual gyro
+if [[ $(grep "GYRO_2_" $source) ]] ; then
+    echo 'ACC_2_ALIGN GYRO_2_ALIGN' >> ${hFile}
+fi
 grep GYRO_2_CS_PIN $source >> ${hFile}
 grep GYRO_2_EXTI_PIN $source >> ${hFile}
 grep GYRO_2_SPI_INSTANCE $source >> ${hFile}
