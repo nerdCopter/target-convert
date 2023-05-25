@@ -111,10 +111,12 @@ echo 'TARGET_SRC = \' >> ${mkFile}
 # EmuFlight supported
 #define USE_GYRO_SPI_ICM20601
 #define USE_GYRO_SPI_ICM20689
-#define USE_GYRO_SPI_ICM42688P
 #define USE_GYRO_SPI_MPU6000
-#define USE_GYRO_SPI_MPU6500
+#define USE_GYRO_SPI_MPU6500 //physical ICM20602
 #define USE_GYRO_SPI_MPU9250
+# new
+#define USE_GYRO_SPI_ICM42688P
+#define USE_ACCGYRO_BMI270
 
 # betaflight
 #define USE_GYRO_SPI_ICM20602
@@ -200,6 +202,7 @@ translate USE_BARO_QMP6988 ${source} 'drivers/barometer/barometer_qmp6988.c \' $
 # skipping non-supported
 
 # skipping compass
+echo 'skipping any compass; please manually modify target.c if necessary.'
 # emuflight src/main/target 
 # drivers/compass/compass_ak8963.c \
 # drivers/compass/compass_ak8975.c \
@@ -208,6 +211,7 @@ translate USE_BARO_QMP6988 ${source} 'drivers/barometer/barometer_qmp6988.c \' $
 # drivers/compass/compass_qmc5883l.c \
 
 # skipping vtx 6705
+echo 'skipping  any VTX RTC6705; please manually mofdify target.c if necessary.'
 # drivers/vtx_rtc6705.c \
 # drivers/vtx_rtc6705_soft_spi.c \
 
@@ -306,10 +310,6 @@ do
 done
 echo '' >> ${hFile}
 
-if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $source) ]] ; then
-    echo '#define USE_EXTI' >> $hFile
-fi
-echo '' >> ${hFile}
 grep -w GYRO_1_ALIGN $source >> ${hFile}  # -w avoid _ALIGN_YAW
 grep GYRO_1_CS_PIN $source >> ${hFile}
 grep GYRO_1_EXTI_PIN $source >> ${hFile}
@@ -319,6 +319,19 @@ grep GYRO_2_CS_PIN $source >> ${hFile}
 grep GYRO_2_EXTI_PIN $source >> ${hFile}
 grep GYRO_2_SPI_INSTANCE $source >> ${hFile}
 echo '' >> ${hFile}
+
+# dual gyro
+if [[ $(grep "GYRO_2_" $source) ]] ; then
+    echo '#define USE_DUAL_GYRO' >> ${hFile}
+    echo '' >> ${hFile}    
+fi
+
+# exti
+if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $source) ]] ; then
+    echo '#define USE_EXTI' >> $hFile
+    echo '#define USE_GYRO_EXTI' >> $hFile
+    echo '' >> ${hFile}
+fi
 
 # mpu
 if [[ $(grep SPI_MPU $source) ]] ; then
@@ -403,6 +416,8 @@ echo '// notice - this file was programmatically generated and may need GYRO_2 m
 echo '' >> ${hFile}
 
 # i2c/baro/mag/etc
+grep -w MAG_ALIGN $source >> ${hFile}
+grep MAG_I2C_INSTANCE $source >> ${hFile}
 if [[ $(grep I2C $source) ]] ; then
     echo '#define USE_I2C' >> ${hFile}
 fi
@@ -422,6 +437,7 @@ do
     translate "I2C${i}_SCL_PIN" $source "#define I2C${i}_SCL $(grep "I2C${i}_SCL_PIN" $source | awk '{print          $3}')" ${hFile}
     translate "I2C${i}_SDA_PIN" $source "#define I2C${i}_SDA $(grep "I2C${i}_SDA_PIN" $source | awk '{print          $3}')" ${hFile}
 done
+echo '// notice - this file was programmatically generated and likely needs MAG/BARO manually added and/or verified.' >> ${hFile}
 echo '' >> ${hFile}
 
 ## flash
@@ -496,7 +512,7 @@ grep SDCARD_DETECT_INVERTED $source >> ${hFile}
 # inverted button
 grep "BUTTON_[AB]_PIN_INVERTED" $source >> ${hFile}
 
-echo '// notice - this file was programmatically generated and did not account for any potential LEDx_INVERTED, inverted Telem, etc.' >> ${hFile}
+echo '// notice - this file was programmatically generated and may not have accounted for any source instance of "#define TLM_INVERTED ON", etc.' >> ${hFile}
 echo ''  >> ${hFile}
 
 # port masks
