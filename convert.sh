@@ -211,12 +211,21 @@ echo 'skipping any compass; please manually modify target.c if necessary.'
 # drivers/compass/compass_qmc5883l.c \
 
 # skipping vtx 6705
-echo 'skipping  any VTX RTC6705; please manually mofdify target.c if necessary.'
+echo 'skipping any VTX RTC6705; please manually modify target.c if necessary.'
 # drivers/vtx_rtc6705.c \
 # drivers/vtx_rtc6705_soft_spi.c \
 
+# led_strip
+translate LED_STRIP ${source} 'drivers/light_led.h \' ${mkFile}
+translate LED_STRIP ${source} 'drivers/light_ws2811strip.c \' ${mkFile}
+translate LED_STRIP ${source} 'drivers/light_ws2811strip_hal.c \' ${mkFile}
+
+# pinio
+translate PINIO ${source} 'drivers/pinio.c \' ${mkFile}
+
+
 # OSD is final driver
-echo 'drivers/max7456.c' >> ${mkFile}
+echo 'drivers/max7456.c \' >> ${mkFile}
 
 echo '' >> ${mkFile}
 echo '# notice - this file was programmatically generated and may be incomplete.' >> ${mkFile}
@@ -288,10 +297,15 @@ grep "LED[0-9]_PIN" $source >> ${hFile}
 grep LED_STRIP_PIN $source >> ${hFile}
 
 # beeper cam-control
-grep USE_BEEPER $source >> ${hFile}
+if [[ $(grep BEEPER_ $source) ]] ; then
+    echo '#define USE_BEEPER' >> ${hFile}
+fi
 grep BEEPER_PIN $source >> ${hFile}
 grep BEEPER_INVERTED $source >> ${hFile}
 grep CAMERA_CONTROL_PIN $source >> ${hFile}
+if [[ $(grep USB_DETECT_PIN $source) ]] ; then
+    echo '#define USE_USB_DETECT' >> ${hFile}
+fi
 echo '' >> ${hFile}
 
 # spi
