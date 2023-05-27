@@ -275,7 +275,6 @@ echo "${license}" > ${hFile}
 echo '#pragma once' >> ${hFile}
 echo '' >> ${hFile}
 
-
 translate MANUFACTURER_ID $source "#define TARGET_BOARD_IDENTIFIER \"$(grep MANUFACTURER_ID $source | awk '{print $3}')\"" ${hFile}
 translate BOARD_NAME $source "#define USBD_PRODUCT_STRING \"$(grep BOARD_NAME $source | awk '{print $3}')\"" ${hFile}
 echo '' >> ${hFile}
@@ -287,6 +286,10 @@ echo '#define USE_VCP'  >> ${hFile}
 if [[ $(grep USE_FLASH $source) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
 fi
+if [[ $(grep USE_MAX7456 $source) ]] ; then
+    echo '#define USE_OSD' >> ${hFile}
+fi
+
 echo '' >> ${hFile}
 
 # led
@@ -449,6 +452,7 @@ for i in {1..4}
 do
     if [[ $(grep "I2C${i}_" $source) ]] ; then 
         echo "#define USE_I2C_DEVICE_${i}"  >> ${hFile}
+        echo "#define I2C_DEVICE        (I2CDEV_${i})"  >> ${hFile}
     fi
     grep I2CDEV_${i} $source >> ${hFile}
     if [[ $(grep "USE_I2C${i}_PULLUP ON" $source) ]] ; then
@@ -475,6 +479,7 @@ grep MAX7456_SPI_INSTANCE $source >> ${hFile}
 echo '' >> ${hFile}
 
 ## vcp, uarts, softserial
+vcpserial=1
 hardserial=$(grep "UART[[:digit:]]\+_TX_PIN" $source | wc -l)
 softserial=$(grep "SOFTSERIAL[[:digit:]]_TX_PIN" $source | wc -l )
 totalserial=$(expr $hardserial + $softserial)
@@ -492,9 +497,11 @@ do
 done
 grep "INVERTER_PIN_UART" $source >> ${hFile}
 grep "USART" $source >> ${hFile}
-echo "#define SERIAL_PORT_COUNT $totalserial"  >> ${hFile}
+echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)"  >> ${hFile}
 echo '// notice - UART/USART were programmatically generated - should verify UART/USART.' >> ${hFile}
-echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_" ' >> ${hFile}
+echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
+echo '// notice - may need "#define DEFAULT_RX_FEATURE, SERIALRX_PROVIDER' >> ${hFile}
+echo '// notice - may need "#define DEFAULT_FEATURES' >> ${hFile}
 echo '// notice - should verify serial count.' >> ${hFile}
 echo '' >> ${hFile}
 
@@ -506,6 +513,7 @@ for i in {1..4}
 do
     translate "ADC${i}_DMA_OPT" $source "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - DMA2_Stream0 likely need correcting, please modify." ${hFile}
 done
+echo ' // notice - DMA conversions incomplete - needs human modifications. e.g. ADC_INSTANCE, ADC3_DMA_OPT, CURRENT_METER_ADC_PIN, etc.'
 grep "DEFAULT_VOLTAGE_METER_SOURCE" $source >> ${hFile}
 grep "DEFAULT_CURRENT_METER_SOURCE" $source >> ${hFile}
 grep DEFAULT_CURRENT_METER_SCALE $source >> ${hFile}
@@ -515,9 +523,15 @@ echo '' >> ${hFile}
 translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_ON" $source "#define ENABLE_DSHOT_DMAR true" ${hFile}
 
 ## esc serial timer
+if [[ $(grep ESCSERIAL $source) ]] ; then
+    echo '#define USE_ESCSERIAL' >> ${hFile}
+fi
 translate "ESCSERIAL_PIN" $source "#define ESCSERIAL_TIMER_TX_PIN $(grep "ESCSERIAL_PIN" $source | awk '{print          $3}')" ${hFile}
 
 echo '' >> ${hFile}
+
+# pinio
+
 
 # inverted RX SPI LED
 if [[ $(grep RX_SPI_LED_INVERTED $source) ]] ; then
