@@ -88,14 +88,38 @@ function translate () {
 # create target.mk file
 
 # setup STM32 type
+# BF:
+# STM32F405
+# STM32F411
+# STM32F411DISCOVERY
+# STM32F411SX1280
+# STM32F4DISCOVERY
+# STM32F745
+# STM32F7X2
+# STM32G47X
+# STM32H723
+# STM32H730
+# STM32H743
+# STM32H750
+# to Emu:
+# F3_TARGETS
+# F405_TARGETS
+# F411_TARGETS
+# F446_TARGETS
+# F7X2RE_TARGETS
+# F7X5XG_TARGETS
+# F7X6XG_TARGETS
+
 if [[ $(grep STM32F405 $source) ]]; then
     echo 'F405_TARGETS   += $(TARGET)' > ${mkFile}
 elif [[ $(grep STM32F411 $source) ]]; then
     echo 'F411_TARGETS   += $(TARGET)' > ${mkFile}
 elif [[ $(grep STM32F446 $source) ]]; then
     echo 'F446_TARGETS   += $(TARGET)' > ${mkFile}
-elif [[ $(grep STM32F7 $source) ]]; then
+elif [[ $(grep STM32F7X2 $source) ]]; then
     echo 'F7X5XG_TARGETS += $(TARGET)' > ${mkFile}
+elif [[ $(grep STM32F745 $source) ]]; then
+    echo 'F7X2RE_TARGETS += $(TARGET)' > ${mkFile}
 else
   echo 'not an F4 nor an F7. exiting.'
   exit
