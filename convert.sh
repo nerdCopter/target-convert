@@ -226,7 +226,7 @@ translate USE_BARO_QMP6988 ${source} 'drivers/barometer/barometer_qmp6988.c \' $
 # skipping non-supported
 
 # skipping compass
-echo 'skipping any compass; please manually modify target.c if necessary.'
+echo 'skipping any compass; please manually modify target.mk if necessary.'
 # emuflight src/main/target 
 # drivers/compass/compass_ak8963.c \
 # drivers/compass/compass_ak8975.c \
@@ -235,7 +235,7 @@ echo 'skipping any compass; please manually modify target.c if necessary.'
 # drivers/compass/compass_qmc5883l.c \
 
 # skipping vtx 6705
-echo 'skipping any VTX RTC6705; please manually modify target.c if necessary.'
+echo 'skipping any VTX RTC6705; please manually modify target.mk if necessary.'
 # drivers/vtx_rtc6705.c \
 # drivers/vtx_rtc6705_soft_spi.c \
 
