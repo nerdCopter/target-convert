@@ -351,17 +351,31 @@ do
 done
 echo '' >> ${hFile}
 
-grep -w GYRO_1_ALIGN $source >> ${hFile}  # -w avoid _ALIGN_YAW
-echo '#define ACC_1_ALIGN GYRO_1_ALIGN' >> ${hFile}
+if [[ $(grep -w GYRO_1_ALIGN $source) ]] ; then
+    grep -w GYRO_1_ALIGN $source >> ${hFile}  # -w avoid _ALIGN_YAW
+else 
+    echo '#define GYRO_1_ALIGN         CW0_DEG' >> ${hFile}
+fi
+echo '#define ACC_1_ALIGN          GYRO_1_ALIGN' >> ${hFile}
 grep GYRO_1_CS_PIN $source >> ${hFile}
 grep GYRO_1_EXTI_PIN $source >> ${hFile}
 grep GYRO_1_SPI_INSTANCE $source >> ${hFile}
+
+if [[ $(grep GYRO_SPI_MPU $source) ]] ; then
+    echo '#define MPU_INT_EXTI         GYRO_1_EXTI_PIN' >> $hFile
+    # gyro_2 will be gyro_2, no need for another MPU_INT_EXTI
+fi
 echo '' >> ${hFile}
 
-grep -w GYRO_2_ALIGN $source >> ${hFile}  # -w avoid _ALIGN_YAW
+
 # dual gyro
+if [[ $(grep -w GYRO_2_ALIGN $source) ]] ; then
+    grep -w GYRO_2_ALIGN $source >> ${hFile}  # -w avoid _ALIGN_YAW
+elif [[ $(grep "GYRO_2_" $source) ]] ; then
+    echo '#define GYRO_2_ALIGN         CW0_DEG' >> ${hFile}
+fi
 if [[ $(grep "GYRO_2_" $source) ]] ; then
-    echo '#define ACC_2_ALIGN GYRO_2_ALIGN' >> ${hFile}
+    echo '#define ACC_2_ALIGN      GYRO_2_ALIGN' >> ${hFile}
 fi
 grep GYRO_2_CS_PIN $source >> ${hFile}
 grep GYRO_2_EXTI_PIN $source >> ${hFile}
@@ -397,7 +411,6 @@ if [[ $(grep SPI_MPU6000 $source) ]] ; then
         echo '#define GYRO_MPU6000_ALIGN        GYRO_1_ALIGN' >> $hFile
         echo '#define MPU6000_CS_PIN            GYRO_1_CS_PIN' >> $hFile
         echo '#define MPU6000_SPI_INSTANCE      GYRO_1_SPI_INSTANCE' >> $hFile
-        echo '#define MPU_INT_EXTI              GYRO_1_EXTI_PIN' >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -412,7 +425,6 @@ if [[ $(grep SPI_MPU6500 $source) ]] ; then
         echo '#define GYRO_MPU6500_ALIGN        GYRO_1_ALIGN' >> $hFile
         echo '#define MPU6500_CS_PIN            GYRO_1_CS_PIN' >> $hFile
         echo '#define MPU6500_SPI_INSTANCE      GYRO_1_SPI_INSTANCE' >> $hFile
-        echo '#define MPU_INT_EXTI              GYRO_1_EXTI_PIN' >> $hFile
     fi
     echo '' >> ${hFile}
 fi
