@@ -125,7 +125,7 @@ else
   exit
 fi
 
-# enable flash and drivers 
+# enable flash and drivers
 echo 'FEATURES       += VCP ONBOARDFLASH' >> ${mkFile}
 echo '' >> ${mkFile}
 echo 'TARGET_SRC = \' >> ${mkFile}
@@ -171,10 +171,10 @@ echo 'TARGET_SRC = \' >> ${mkFile}
 
 translate MPU ${source} 'drivers/accgyro/accgyro_mpu.c \' ${mkFile}
 
-translate USE_GYRO_SPI_MPU6000 ${source} 'drivers/accgyro/accgyro_spi_mpu6000.c \' ${mkFile} 
-translate USE_GYRO_SPI_MPU6500 ${source} 'drivers/accgyro/accgyro_mpu6500.c \' ${mkFile} 
-translate USE_GYRO_SPI_MPU6500 ${source} 'drivers/accgyro/accgyro_spi_mpu6500.c \' ${mkFile} 
-translate USE_GYRO_SPI_MPU9250 ${source} 'drivers/accgyro/accgyro_spi_mpu9250.c \' ${mkFile} 
+translate USE_GYRO_SPI_MPU6000 ${source} 'drivers/accgyro/accgyro_spi_mpu6000.c \' ${mkFile}
+translate USE_GYRO_SPI_MPU6500 ${source} 'drivers/accgyro/accgyro_mpu6500.c \' ${mkFile}
+translate USE_GYRO_SPI_MPU6500 ${source} 'drivers/accgyro/accgyro_spi_mpu6500.c \' ${mkFile}
+translate USE_GYRO_SPI_MPU9250 ${source} 'drivers/accgyro/accgyro_spi_mpu9250.c \' ${mkFile}
 translate USE_GYRO_SPI_ICM20689 ${source} 'drivers/accgyro/accgyro_spi_icm20689.c \' ${mkFile}
 translate USE_GYRO_SPI_ICM20601 ${source} 'drivers/accgyro/accgyro_spi_icm20601.c \' ${mkFile}
 translate USE_GYRO_SPI_ICM20602 ${source} 'drivers/accgyro/accgyro_spi_icm20602.c \' ${mkFile}
@@ -227,7 +227,7 @@ translate USE_BARO_QMP6988 ${source} 'drivers/barometer/barometer_qmp6988.c \' $
 
 # skipping compass
 echo 'skipping any compass; please manually modify target.mk if necessary.'
-# emuflight src/main/target 
+# emuflight src/main/target
 # drivers/compass/compass_ak8963.c \
 # drivers/compass/compass_ak8975.c \
 # drivers/compass/compass_hmc5883l.c \
@@ -342,7 +342,7 @@ fi
 
 for i in {1..6}
 do
-    if [[ $(grep "SPI${i}_" $source) ]] ; then 
+    if [[ $(grep "SPI${i}_" $source) ]] ; then
         echo "#define USE_SPI_DEVICE_${i}"  >> ${hFile}
     fi
     grep SPI${i}_SCK_PIN $source >> ${hFile}
@@ -353,7 +353,7 @@ echo '' >> ${hFile}
 
 if [[ $(grep -w GYRO_1_ALIGN $source) ]] ; then
     grep -w GYRO_1_ALIGN $source >> ${hFile}  # -w avoid _ALIGN_YAW
-else 
+else
     echo '#define GYRO_1_ALIGN         CW0_DEG' >> ${hFile}
 fi
 echo '#define ACC_1_ALIGN          GYRO_1_ALIGN' >> ${hFile}
@@ -385,7 +385,7 @@ echo '' >> ${hFile}
 # dual gyro
 if [[ $(grep "GYRO_2_" $source) ]] ; then
     echo '#define USE_DUAL_GYRO' >> ${hFile}
-    echo '' >> ${hFile}    
+    echo '' >> ${hFile}
 fi
 
 # exti
@@ -459,7 +459,7 @@ fi
 
 # BMI270
 #define USE_ACCGYRO_BMI270
-#define USE_SPI_GYRO    
+#define USE_SPI_GYRO
 if [[ $(grep ACCGYRO_BMI270 $source) ]] ; then
     # convert gyro1 > icm -- this may need changing later
     echo '#define USE_SPI_GYRO' >> $hFile
@@ -486,7 +486,7 @@ if [[ $(grep "USE_I2C[0-4]_PULLUP" $source) ]] ; then
 fi
 for i in {1..4}
 do
-    if [[ $(grep "I2C${i}_" $source) ]] ; then 
+    if [[ $(grep "I2C${i}_" $source) ]] ; then
         echo "#define USE_I2C_DEVICE_${i}"  >> ${hFile}
         echo "#define I2C_DEVICE        (I2CDEV_${i})"  >> ${hFile}
     fi
