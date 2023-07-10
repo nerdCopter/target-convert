@@ -220,6 +220,7 @@ translate USE_ACCGYRO_BMI270 ${source} 'drivers/accgyro/accgyro_spi_bmi270.c \' 
 
 translate USE_BARO_BMP085 ${source} 'drivers/barometer/barometer_bmp085.c \' ${mkFile}
 translate USE_BARO_BMP280 ${source} 'drivers/barometer/barometer_bmp280.c \' ${mkFile}
+translate USE_BARO_SPI_BMP280 ${source} 'drivers/barometer/barometer_bmp280.c \' ${mkFile}
 translate USE_BARO_LPS ${source} 'drivers/barometer/barometer_lps.c \' ${mkFile}
 translate USE_BARO_MS5611 ${source} 'drivers/barometer/barometer_ms5611.c \' ${mkFile}
 translate USE_BARO_QMP6988 ${source} 'drivers/barometer/barometer_qmp6988.c \' ${mkFile}
@@ -242,7 +243,7 @@ echo 'skipping any VTX RTC6705; please manually modify target.mk if necessary.'
 # led_strip
 translate LED_STRIP ${source} 'drivers/light_led.h \' ${mkFile}
 translate LED_STRIP ${source} 'drivers/light_ws2811strip.c \' ${mkFile}
-translate LED_STRIP ${source} 'drivers/light_ws2811strip_hal.c \' ${mkFile}
+# no good ? -- translate LED_STRIP ${source} 'drivers/light_ws2811strip_hal.c \' ${mkFile}
 
 # pinio
 translate PINIO ${source} 'drivers/pinio.c \' ${mkFile}
@@ -268,11 +269,11 @@ echo '#include "drivers/timer_def.h"' >> ${cFile}
 echo ''  >> ${cFile}
 echo 'const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {' >> ${cFile}
 echo '/* notice - incomplete */'  >> ${cFile}
-echo '// format : DEF_TIM(TIMxx, CHx, Pxx, TIM_USE_xxxxxxx, x, x), //comment' >> ${cFile}
+echo '// format : DEF_TIM(TIMxx, CHx, Pxx, TIM_USE_xxxxxxx, 0, x), //comment' >> ${cFile}
 echo '};' >> ${cFile}
 echo '' >> ${cFile}
 
-echo "not converting timers: target.c needs user translation from unified-targets currently. will need to reference associated unified-target."
+echo "not converting timers: target.c needs user translation from unified-targets. please reference associated unified-target."
 
 echo '// TIM_USE options:' >> ${cFile}
 echo '// TIM_USE_ANY' >> ${cFile}
@@ -321,7 +322,10 @@ if [[ $(grep LED[0-9]_PIN $source) ]] ; then
     echo '#define USE_LED' >> ${hFile}
 fi
 grep "LED[0-9]_PIN" $source >> ${hFile}
-grep LED_STRIP_PIN $source >> ${hFile}
+
+if [[ $(grep LED_STRIP_PIN $source >> ${hFile}) ]] ; then
+    echo '#define USE_LED_STRIP' >> ${hFile}
+fi
 
 # beeper cam-control
 if [[ $(grep BEEPER_ $source) ]] ; then
@@ -391,7 +395,8 @@ fi
 # exti
 if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $source) ]] ; then
     echo '#define USE_EXTI' >> $hFile
-    echo '#define USE_GYRO_EXTI' >> $hFile
+    echo '//#define USE_GYRO_EXTI' >> $hFile
+    echo '// notice - USE_GYRO_EXTI validity unknown at this time' >> $hFile
     echo '' >> ${hFile}
 fi
 
@@ -537,7 +542,6 @@ echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)"  >> ${hFile}
 echo '// notice - UART/USART were programmatically generated - should verify UART/USART.' >> ${hFile}
 echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
 echo '// notice - may need "#define DEFAULT_RX_FEATURE, SERIALRX_PROVIDER' >> ${hFile}
-echo '// notice - may need "#define DEFAULT_FEATURES' >> ${hFile}
 echo '// notice - should verify serial count.' >> ${hFile}
 echo '' >> ${hFile}
 
@@ -561,13 +565,14 @@ translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_ON" $source "#define ENABLE_DSHOT_DMAR
 ## esc serial timer
 if [[ $(grep ESCSERIAL $source) ]] ; then
     echo '#define USE_ESCSERIAL' >> ${hFile}
+    translate "ESCSERIAL_PIN" $source "#define ESCSERIAL_TIMER_TX_PIN $(grep "ESCSERIAL_PIN" $source | awk '{print          $3}')" ${hFile}
+    echo '' >> ${hFile}
 fi
-translate "ESCSERIAL_PIN" $source "#define ESCSERIAL_TIMER_TX_PIN $(grep "ESCSERIAL_PIN" $source | awk '{print          $3}')" ${hFile}
-
-echo '' >> ${hFile}
 
 # pinio
-
+if [[ $(grep 'PINIO[0-9]_' $source >> ${hFile}) ]] ; then
+    echo '' >> $hFile
+fi
 
 # inverted RX SPI LED
 if [[ $(grep RX_SPI_LED_INVERTED $source) ]] ; then
@@ -614,10 +619,15 @@ fi
 echo '// notice - masks were programmatically generated - must verify last port group for 0xffff or (BIT(2))'  >> ${hFile}
 echo '' >> ${hFile}
 
-echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep -c 'TIMER_PIN_MAP(' ${source} )" >> ${hFile}
+echo '#define DEFAULT_FEATURES       (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_AIRMODE | FEATURE_RX_SERIAL)' >> ${hFile}
+echo '#define DEFAULT_RX_FEATURE     FEATURE_RX_SERIAL' >> ${hFile}
+echo '// notice - incomplete; may need additional DEFAULT_FEATURES; e.g. FEATURE_SOFTSERIAL | FEATURE_RX_SPI' >> ${hFile}
+echo '' >> ${hFile}
 
+echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep -c 'TIMER_PIN_MAP(' ${source} )" >> ${hFile}
 # to do: logic
-echo '#define USED_TIMERS ( /* notice - incomplete */ )' >> ${hFile}
+echo '#define USED_TIMERS ( TIM_N(x) | TIM_N(x) | TIM_N(x) | TIM_N(x) | TIM_N(x) )' >> ${hFile}
+echo '// notice - incomplete. add/remove/replace x' >> ${hFile}
 echo '' >> ${hFile}
 
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${hFile}
