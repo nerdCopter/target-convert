@@ -362,7 +362,7 @@ else
 fi
 echo '#define ACC_1_ALIGN          GYRO_1_ALIGN' >> ${hFile}
 grep GYRO_1_CS_PIN $source >> ${hFile}
-grep GYRO_1_EXTI_PIN $source >> ${hFile}
+grep GYRO_1_EXTI_PIN $source >> ${hFile} && echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN'  >> ${hFile}
 grep GYRO_1_SPI_INSTANCE $source >> ${hFile}
 
 if [[ $(grep GYRO_SPI_MPU $source) ]] ; then
@@ -557,6 +557,7 @@ echo ' // notice - DMA conversions incomplete - needs human modifications. e.g. 
 grep "DEFAULT_VOLTAGE_METER_SOURCE" $source >> ${hFile}
 grep "DEFAULT_CURRENT_METER_SOURCE" $source >> ${hFile}
 grep DEFAULT_CURRENT_METER_SCALE $source >> ${hFile}
+grep ADC_INSTANCE $source >> ${hFile}
 echo '' >> ${hFile}
 
 ## dshot
