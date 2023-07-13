@@ -1,17 +1,20 @@
 #!/bin/bash
 
 # EmuFlight definition converter.
-# 2023 May - nerdCopter
+# 2023 July - nerdCopter
 # Partially Converts betaflight config.h files to EmuFlight .mk .c .h files.
 # Open to receiving more efficient and elegant code.
+# July 2023 revision requires Internet connection for autmated definitions download.
 
 if ! [ $# -eq 2 ]  2>/dev/null; then
     echo "EmuFlight partial target converter script."
-    echo "Usage: ${0##*/} <config.h> <targetFolder>"
-    echo "   Ex: ${0##*/} ./config.h ./"
-    echo "   Ex: ${0##*/} ../config/config/configs/MAMBAF405_2022B/config.h ../EmuFlight/src/main/target"
+    echo "Usage: ${0##*/} <unifiedTargetName> <targetFolder>"
+    echo "   Ex: ${0##*/} TURC-TUNERCF405 ./"
+    echo "   Ex: ${0##*/} DIAT-MAMBAF722_2022B ../EmuFlight/src/main/target/"
     echo ""
-    echo "note: config.h files should com from https://github.com/betaflight/config/"
+    echo "note: Target definitions will be downloaded from"
+    echo "      https://github.com/betaflight/config/"
+    echo "      and https://github.com/betaflight/unified-targets/"
     exit
 fi
 
@@ -39,6 +42,10 @@ if [[ ! $( which xargs ) ]] ; then
     echo 'please install: xargs'
     exit 1
 fi
+if [[ ! $( which wget ) ]] ; then
+    echo 'please install: wget'
+    exit 1
+fi
 
 license='/*
  * This file is part of EmuFlight. It is derived from Betaflight.
@@ -61,15 +68,34 @@ license='/*
  * If not, see <http://www.gnu.org/licenses/>.
  */
  '
+# examples: https://github.com/betaflight/config/raw/master/configs/TUNERCF405/config.h
+#           https://github.com/betaflight/unified-targets/raw/master/configs/default/TURC-TUNERCF405.config
+#           https://github.com/betaflight/config/raw/master/configs/MAMBAF722_2022B/config.h
+#           https://github.com/betaflight/unified-targets/raw/master/configs/default/DIAT-MAMBAF722_2022B.config
 
-source="${1}"
-manufacturer="$(grep MANUFACTURER_ID $source | awk -F' ' '{print $3}')"
-board="$(grep BOARD_NAME $source | awk -F' ' '{print $3}')"
+# old
+# manufacturer="$(grep MANUFACTURER_ID $source | awk -F' ' '{print $3}')"
+# board="$(grep BOARD_NAME $source | awk -F' ' '{print $3}')"
+# new
+manufacturer=$(echo ${1} | awk -F'-' '{print $1}') || echo "bad target name"
+board=$(echo ${1} | awk -F'-' '{print $2}') || echo "bad target name"
 fc="${manufacturer}_${board}"
 dest="${2}/${fc}"
 
 echo "creating ${fc}"
 mkdir ${dest} 2> /dev/null
+
+echo "downloading..."
+wget -c -N -P ${dest} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h"
+wget -c -N -P ${dest} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config"
+
+#source="${1}"
+source="${dest}/config.h"
+unified="${dest}/${1}.config"
+
+echo "resulting files:"
+echo "source config.h: ${source}"
+echo "source unified: ${unified}"
 
 mkFile="${dest}/target.mk"
 cFile="${dest}/target.c"
