@@ -77,8 +77,8 @@ license='/*
 # manufacturer="$(grep MANUFACTURER_ID $config | awk -F' ' '{print $3}')"
 # board="$(grep BOARD_NAME $config | awk -F' ' '{print $3}')"
 # new
-manufacturer=$(echo ${1} | awk -F'-' '{print $1}') || echo "bad target name"
-board=$(echo ${1} | awk -F'-' '{print $2}') || echo "bad target name"
+manufacturer=$(echo ${1} | awk -F'-' '{print $1}')
+board=$(echo ${1} | awk -F'-' '{print $2}')
 fc="${manufacturer}_${board}"
 dest="${2}/${fc}"
 
@@ -86,8 +86,8 @@ echo "creating ${fc}"
 mkdir ${dest} 2> /dev/null
 
 echo "downloading..."
-wget -c -N -nv -P ${dest} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h"
-wget -c -N -nv -P ${dest} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config"
+wget -c -N -nv -P ${dest} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h" || { echo "download failed" ; rm -r ${dest} ; exit 1 ; }
+wget -c -N -nv -P ${dest} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config" || { echo "download failed" ; rm -r ${dest} ; exit 1 ; }
 
 #config="${1}"
 config="${dest}/config.h"
