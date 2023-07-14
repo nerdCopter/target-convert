@@ -93,7 +93,6 @@ wget -c -N -nv -P ${dest} "https://github.com/betaflight/unified-targets/raw/mas
 config="${dest}/config.h"
 unified="${dest}/${1}.config"
 
-echo "resulting files:"
 echo "config.h: ${config}"
 echo "unified: ${unified}"
 
@@ -593,7 +592,7 @@ for i in {1..4}
 do
     translate "ADC${i}_DMA_OPT" $config "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - DMA2_Stream0 likely need correcting, please modify." ${hFile}
 done
-echo ' // notice - DMA conversions incomplete - needs human modifications. e.g. ADC_INSTANCE, ADC3_DMA_OPT, CURRENT_METER_ADC_PIN, etc.'
+echo ' // notice - DMA conversions incomplete - needs human modifications. e.g. ADC_INSTANCE, ADC3_DMA_OPT, CURRENT_METER_ADC_PIN, etc.'  >> ${hFile}
 grep "DEFAULT_VOLTAGE_METER_config" $config >> ${hFile}
 grep "DEFAULT_CURRENT_METER_config" $config >> ${hFile}
 grep DEFAULT_CURRENT_METER_SCALE $config >> ${hFile}
