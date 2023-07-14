@@ -86,8 +86,8 @@ echo "creating ${fc}"
 mkdir ${dest} 2> /dev/null
 
 echo "downloading..."
-wget -c -N -P ${dest} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h"
-wget -c -N -P ${dest} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config"
+wget -c -N -nv -P ${dest} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h"
+wget -c -N -nv -P ${dest} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config"
 
 #source="${1}"
 source="${dest}/config.h"
@@ -381,22 +381,27 @@ do
 done
 echo '' >> ${hFile}
 
+# gyro defines
 if [[ $(grep -w GYRO_1_ALIGN $source) ]] ; then
     grep -w GYRO_1_ALIGN $source >> ${hFile}  # -w avoid _ALIGN_YAW
+    G1_align=$(grep -w GYRO_1_ALIGN $source | awk -F'GYRO_1_ALIGN' '{print $2}')
 else
     echo '#define GYRO_1_ALIGN         CW0_DEG' >> ${hFile}
+    G1_align='CW0_DEG'
 fi
-echo '#define ACC_1_ALIGN          GYRO_1_ALIGN' >> ${hFile}
+echo "#define ACC_1_ALIGN          ${G1_align}" >> ${hFile}
 grep GYRO_1_CS_PIN $source >> ${hFile}
+G1_csPin=$(grep -w GYRO_1_CS_PIN $source | awk -F'GYRO_1_CS_PIN' '{print $2}')
 grep GYRO_1_EXTI_PIN $source >> ${hFile} && echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN'  >> ${hFile}
+G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $source | awk -F'GYRO_1_EXTI_PIN' '{print $2}')
 grep GYRO_1_SPI_INSTANCE $source >> ${hFile}
+G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $source | awk -F'GYRO_1_SPI_INSTANCE' '{print $2}')
 
-if [[ $(grep GYRO_SPI_MPU $source) ]] ; then
-    echo '#define MPU_INT_EXTI         GYRO_1_EXTI_PIN' >> $hFile
-    # gyro_2 will be gyro_2, no need for another MPU_INT_EXTI
+if [[ $(grep GYRO_1_EXTI_PIN $source) ]] ; then
+    echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
+    # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
 fi
 echo '' >> ${hFile}
-
 
 # dual gyro
 if [[ $(grep -w GYRO_2_ALIGN $source) ]] ; then
@@ -438,10 +443,10 @@ fi
 if [[ $(grep SPI_MPU6000 $source) ]] ; then
     # convert gyro1 > mpu -- this may need changing later
     if [[ $(grep GYRO_1_SPI_INSTANCE $source) ]] ; then
-        echo '#define ACC_MPU6000_ALIGN         GYRO_1_ALIGN' >> $hFile
-        echo '#define GYRO_MPU6000_ALIGN        GYRO_1_ALIGN' >> $hFile
-        echo '#define MPU6000_CS_PIN            GYRO_1_CS_PIN' >> $hFile
-        echo '#define MPU6000_SPI_INSTANCE      GYRO_1_SPI_INSTANCE' >> $hFile
+        echo "#define ACC_MPU6000_ALIGN         ${G1_align}" >> $hFile
+        echo "#define GYRO_MPU6000_ALIGN        ${G1_align}" >> $hFile
+        echo "#define MPU6000_CS_PIN            ${G1_csPin}" >> $hFile
+        echo "#define MPU6000_SPI_INSTANCE      ${G1_spi}"   >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -452,10 +457,10 @@ fi
 if [[ $(grep SPI_MPU6500 $source) ]] ; then
     # convert gyro1 > mpu -- this may need changing later
     if [[ $(grep GYRO_1_SPI_INSTANCE $source) ]] ; then
-        echo '#define ACC_MPU6500_ALIGN         GYRO_1_ALIGN' >> $hFile
-        echo '#define GYRO_MPU6500_ALIGN        GYRO_1_ALIGN' >> $hFile
-        echo '#define MPU6500_CS_PIN            GYRO_1_CS_PIN' >> $hFile
-        echo '#define MPU6500_SPI_INSTANCE      GYRO_1_SPI_INSTANCE' >> $hFile
+        echo "#define ACC_MPU6500_ALIGN         ${G1_align}" >> $hFile
+        echo "#define GYRO_MPU6500_ALIGN        ${G1_align}" >> $hFile
+        echo "#define MPU6500_CS_PIN            ${G1_csPin}" >> $hFile
+        echo "#define MPU6500_SPI_INSTANCE      ${G1_spi}"   >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -466,10 +471,10 @@ fi
 if [[ $(grep SPI_ICM20689 $source) ]] ; then
     # convert gyro1 > icm -- this may need changing later
     if [[ $(grep GYRO_1_SPI_INSTANCE $source) ]] ; then
-        echo '#define ACC_ICM20689_ALIGN        GYRO_1_ALIGN' >> $hFile
-        echo '#define GYRO_ICM20689_ALIGN       GYRO_1_ALIGN' >> $hFile
-        echo '#define ICM20689_CS_PIN           GYRO_1_CS_PIN' >> $hFile
-        echo '#define ICM20689_SPI_INSTANCE     GYRO_1_SPI_INSTANCE' >> $hFile
+        echo "#define ACC_ICM20689_ALIGN         ${G1_align}" >> $hFile
+        echo "#define GYRO_ICM20689_ALIGN        ${G1_align}" >> $hFile
+        echo "#define ICM20689_CS_PIN            ${G1_csPin}" >> $hFile
+        echo "#define ICM20689_SPI_INSTANCE      ${G1_spi}"   >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -480,10 +485,10 @@ fi
 if [[ $(grep SPI_ICM42688P $source) ]] ; then
     # convert gyro1 > icm -- this may need changing later
     if [[ $(grep GYRO_1_SPI_INSTANCE $source) ]] ; then
-        echo '#define ACC_ICM42688P_ALIGN       GYRO_1_ALIGN' >> $hFile
-        echo '#define GYRO_ICM42688P_ALIGN      GYRO_1_ALIGN' >> $hFile
-        echo '#define ICM42688P_CS_PIN          GYRO_1_CS_PIN' >> $hFile
-        echo '#define ICM42688P_SPI_INSTANCE    GYRO_1_SPI_INSTANCE' >> $hFile
+        echo "#define ACC_ICM42688P_ALIGN      ${G1_align}" >> $hFile
+        echo "#define GYRO_ICM42688P_ALIGN     ${G1_align}" >> $hFile
+        echo "#define ICM42688P_CS_PIN         ${G1_csPin}" >> $hFile
+        echo "#define ICM42688P_SPI_INSTANCE   ${G1_spi}"   >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -495,10 +500,10 @@ if [[ $(grep ACCGYRO_BMI270 $source) ]] ; then
     # convert gyro1 > icm -- this may need changing later
     echo '#define USE_SPI_GYRO' >> $hFile
     if [[ $(grep GYRO_1_SPI_INSTANCE $source) ]] ; then
-        echo '#define ACC_BMI270_ALIGN          GYRO_1_ALIGN' >> $hFile
-        echo '#define GYRO_BMI270_ALIGN         GYRO_1_ALIGN' >> $hFile
-        echo '#define BMI270_CS_PIN             GYRO_1_CS_PIN' >> $hFile
-        echo '#define BMI270_SPI_INSTANCE       GYRO_1_SPI_INSTANCE' >> $hFile
+        echo "#define ACC_BMI270_ALIGN         ${G1_align}" >> $hFile
+        echo "#define GYRO_BMI270_ALIGN        ${G1_align}" >> $hFile
+        echo "#define BMI270_CS_PIN            ${G1_csPin}" >> $hFile
+        echo "#define BMI270_SPI_INSTANCE      ${G1_spi}"   >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -571,6 +576,15 @@ echo '// notice - may need "#define DEFAULT_RX_FEATURE, SERIALRX_PROVIDER' >> ${
 echo '// notice - should verify serial count.' >> ${hFile}
 echo '' >> ${hFile}
 
+# RX SPI & inverted RX SPI LED
+grep "RX_SPI_EXTI_PIN" $source >> ${hFile}
+if [[ $(grep RX_SPI_LED_INVERTED $source) ]] ; then
+    echo '#define RX_CC2500_SPI_LED_PIN_INVERTED' >> $hFile
+    echo '#define RX_FRSKY_SPI_LED_PIN_INVERTED' >> $hFile
+    echo '// notice - this needs to be verified' >> $hFile
+    echo '' >> $hFile
+fi
+
 ## adc, default voltage/current, scale
 translate "ADC_VBAT_PIN" $source "#define VBAT_ADC_PIN $(grep "ADC_VBAT_PIN" $source | awk '{print          $3}')" ${hFile}
 translate "ADC_CURR_PIN" $source "#define CURRENT_METER_ADC_PIN $(grep "ADC_CURR_PIN" $source | awk '{print          $3}')" ${hFile}
@@ -598,14 +612,6 @@ fi
 
 # pinio
 if [[ $(grep 'PINIO[0-9]_' $source >> ${hFile}) ]] ; then
-    echo '' >> $hFile
-fi
-
-# inverted RX SPI LED
-if [[ $(grep RX_SPI_LED_INVERTED $source) ]] ; then
-    echo '#define RX_CC2500_SPI_LED_PIN_INVERTED' >> $hFile
-    echo '#define RX_FRSKY_SPI_LED_PIN_INVERTED' >> $hFile
-    echo '// notice - this needs to be verified' >> $hFile
     echo '' >> $hFile
 fi
 
