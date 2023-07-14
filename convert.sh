@@ -74,8 +74,8 @@ license='/*
 #           https://github.com/betaflight/unified-targets/raw/master/configs/default/DIAT-MAMBAF722_2022B.config
 
 # old
-# manufacturer="$(grep MANUFACTURER_ID $source | awk -F' ' '{print $3}')"
-# board="$(grep BOARD_NAME $source | awk -F' ' '{print $3}')"
+# manufacturer="$(grep MANUFACTURER_ID $config | awk -F' ' '{print $3}')"
+# board="$(grep BOARD_NAME $config | awk -F' ' '{print $3}')"
 # new
 manufacturer=$(echo ${1} | awk -F'-' '{print $1}') || echo "bad target name"
 board=$(echo ${1} | awk -F'-' '{print $2}') || echo "bad target name"
@@ -89,13 +89,13 @@ echo "downloading..."
 wget -c -N -nv -P ${dest} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h"
 wget -c -N -nv -P ${dest} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config"
 
-#source="${1}"
-source="${dest}/config.h"
+#config="${1}"
+config="${dest}/config.h"
 unified="${dest}/${1}.config"
 
 echo "resulting files:"
-echo "source config.h: ${source}"
-echo "source unified: ${unified}"
+echo "config.h: ${config}"
+echo "unified: ${unified}"
 
 mkFile="${dest}/target.mk"
 cFile="${dest}/target.c"
@@ -136,15 +136,15 @@ function translate () {
 # F7X5XG_TARGETS
 # F7X6XG_TARGETS
 
-if [[ $(grep STM32F405 $source) ]]; then
+if [[ $(grep STM32F405 $config) ]]; then
     echo 'F405_TARGETS   += $(TARGET)' > ${mkFile}
-elif [[ $(grep STM32F411 $source) ]]; then
+elif [[ $(grep STM32F411 $config) ]]; then
     echo 'F411_TARGETS   += $(TARGET)' > ${mkFile}
-elif [[ $(grep STM32F446 $source) ]]; then
+elif [[ $(grep STM32F446 $config) ]]; then
     echo 'F446_TARGETS   += $(TARGET)' > ${mkFile}
-elif [[ $(grep STM32F7X2 $source) ]]; then
+elif [[ $(grep STM32F7X2 $config) ]]; then
     echo 'F7X5XG_TARGETS += $(TARGET)' > ${mkFile}
-elif [[ $(grep STM32F745 $source) ]]; then
+elif [[ $(grep STM32F745 $config) ]]; then
     echo 'F7X2RE_TARGETS += $(TARGET)' > ${mkFile}
 else
   echo 'not an F4 nor an F7. exiting.'
@@ -195,17 +195,17 @@ echo 'TARGET_SRC = \' >> ${mkFile}
 # drivers/accgyro_legacy/accgyro_l3gd20.c \
 # drivers/accgyro_legacy/accgyro_lsm303dlhc.c \
 
-translate MPU ${source} 'drivers/accgyro/accgyro_mpu.c \' ${mkFile}
+translate MPU ${config} 'drivers/accgyro/accgyro_mpu.c \' ${mkFile}
 
-translate USE_GYRO_SPI_MPU6000 ${source} 'drivers/accgyro/accgyro_spi_mpu6000.c \' ${mkFile}
-translate USE_GYRO_SPI_MPU6500 ${source} 'drivers/accgyro/accgyro_mpu6500.c \' ${mkFile}
-translate USE_GYRO_SPI_MPU6500 ${source} 'drivers/accgyro/accgyro_spi_mpu6500.c \' ${mkFile}
-translate USE_GYRO_SPI_MPU9250 ${source} 'drivers/accgyro/accgyro_spi_mpu9250.c \' ${mkFile}
-translate USE_GYRO_SPI_ICM20689 ${source} 'drivers/accgyro/accgyro_spi_icm20689.c \' ${mkFile}
-translate USE_GYRO_SPI_ICM20601 ${source} 'drivers/accgyro/accgyro_spi_icm20601.c \' ${mkFile}
-translate USE_GYRO_SPI_ICM20602 ${source} 'drivers/accgyro/accgyro_spi_icm20602.c \' ${mkFile}
-translate USE_ACC_SPI_ICM426 ${source} 'drivers/accgyro/accgyro_spi_icm426xx.c \' ${mkFile}
-translate USE_ACCGYRO_BMI270 ${source} 'drivers/accgyro/accgyro_spi_bmi270.c \' ${mkFile}
+translate USE_GYRO_SPI_MPU6000 ${config} 'drivers/accgyro/accgyro_spi_mpu6000.c \' ${mkFile}
+translate USE_GYRO_SPI_MPU6500 ${config} 'drivers/accgyro/accgyro_mpu6500.c \' ${mkFile}
+translate USE_GYRO_SPI_MPU6500 ${config} 'drivers/accgyro/accgyro_spi_mpu6500.c \' ${mkFile}
+translate USE_GYRO_SPI_MPU9250 ${config} 'drivers/accgyro/accgyro_spi_mpu9250.c \' ${mkFile}
+translate USE_GYRO_SPI_ICM20689 ${config} 'drivers/accgyro/accgyro_spi_icm20689.c \' ${mkFile}
+translate USE_GYRO_SPI_ICM20601 ${config} 'drivers/accgyro/accgyro_spi_icm20601.c \' ${mkFile}
+translate USE_GYRO_SPI_ICM20602 ${config} 'drivers/accgyro/accgyro_spi_icm20602.c \' ${mkFile}
+translate USE_ACC_SPI_ICM426 ${config} 'drivers/accgyro/accgyro_spi_icm426xx.c \' ${mkFile}
+translate USE_ACCGYRO_BMI270 ${config} 'drivers/accgyro/accgyro_spi_bmi270.c \' ${mkFile}
 # skipping legacy, skipping 6050, skipping non-supported
 
 # barometers
@@ -244,12 +244,12 @@ translate USE_ACCGYRO_BMI270 ${source} 'drivers/accgyro/accgyro_spi_bmi270.c \' 
 # drivers/barometer/barometer_ms5611.c
 # drivers/barometer/barometer_qmp6988.c
 
-translate USE_BARO_BMP085 ${source} 'drivers/barometer/barometer_bmp085.c \' ${mkFile}
-translate USE_BARO_BMP280 ${source} 'drivers/barometer/barometer_bmp280.c \' ${mkFile}
-translate USE_BARO_SPI_BMP280 ${source} 'drivers/barometer/barometer_bmp280.c \' ${mkFile}
-translate USE_BARO_LPS ${source} 'drivers/barometer/barometer_lps.c \' ${mkFile}
-translate USE_BARO_MS5611 ${source} 'drivers/barometer/barometer_ms5611.c \' ${mkFile}
-translate USE_BARO_QMP6988 ${source} 'drivers/barometer/barometer_qmp6988.c \' ${mkFile}
+translate USE_BARO_BMP085 ${config} 'drivers/barometer/barometer_bmp085.c \' ${mkFile}
+translate USE_BARO_BMP280 ${config} 'drivers/barometer/barometer_bmp280.c \' ${mkFile}
+translate USE_BARO_SPI_BMP280 ${config} 'drivers/barometer/barometer_bmp280.c \' ${mkFile}
+translate USE_BARO_LPS ${config} 'drivers/barometer/barometer_lps.c \' ${mkFile}
+translate USE_BARO_MS5611 ${config} 'drivers/barometer/barometer_ms5611.c \' ${mkFile}
+translate USE_BARO_QMP6988 ${config} 'drivers/barometer/barometer_qmp6988.c \' ${mkFile}
 # skipping non-supported
 
 # skipping compass
@@ -267,12 +267,12 @@ echo 'skipping any VTX RTC6705; please manually modify target.mk if necessary.'
 # drivers/vtx_rtc6705_soft_spi.c \
 
 # led_strip
-translate LED_STRIP ${source} 'drivers/light_led.h \' ${mkFile}
-translate LED_STRIP ${source} 'drivers/light_ws2811strip.c \' ${mkFile}
-# no good ? -- translate LED_STRIP ${source} 'drivers/light_ws2811strip_hal.c \' ${mkFile}
+translate LED_STRIP ${config} 'drivers/light_led.h \' ${mkFile}
+translate LED_STRIP ${config} 'drivers/light_ws2811strip.c \' ${mkFile}
+# no good ? -- translate LED_STRIP ${config} 'drivers/light_ws2811strip_hal.c \' ${mkFile}
 
 # pinio
-translate PINIO ${source} 'drivers/pinio.c \' ${mkFile}
+translate PINIO ${config} 'drivers/pinio.c \' ${mkFile}
 
 
 # OSD is final driver
@@ -312,9 +312,9 @@ echo '// TIM_USE_PWM' >> ${cFile}
 echo '// TIM_USE_SERVO' >> ${cFile}
 echo '// TIM_USE_TRANSPONDER' >> ${cFile}
 echo '' >> ${cFile}
-echo '// config.h resources:' >> ${cFile}
-grep "MOTOR[[:digit:]]\+_PIN" $source | xargs -d'\n' --replace echo "// {}" >> ${cFile}
-grep TIMER_PIN_MAP $source | xargs -d'\n' --replace echo "// {}" >> ${cFile}
+echo '// config.h reconfigs:' >> ${cFile}
+grep "MOTOR[[:digit:]]\+_PIN" $config | xargs -d'\n' --replace echo "// {}" >> ${cFile}
+grep TIMER_PIN_MAP $config | xargs -d'\n' --replace echo "// {}" >> ${cFile}
 
 echo '' >> ${cFile}
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${cFile}
@@ -326,105 +326,105 @@ echo "${license}" > ${hFile}
 echo '#pragma once' >> ${hFile}
 echo '' >> ${hFile}
 
-translate MANUFACTURER_ID $source "#define TARGET_BOARD_IDENTIFIER \"$(grep MANUFACTURER_ID $source | awk '{print $3}')\"" ${hFile}
-translate BOARD_NAME $source "#define USBD_PRODUCT_STRING \"$(grep BOARD_NAME $source | awk '{print $3}')\"" ${hFile}
+translate MANUFACTURER_ID $config "#define TARGET_BOARD_IDENTIFIER \"$(grep MANUFACTURER_ID $config | awk '{print $3}')\"" ${hFile}
+translate BOARD_NAME $config "#define USBD_PRODUCT_STRING \"$(grep BOARD_NAME $config | awk '{print $3}')\"" ${hFile}
 echo '' >> ${hFile}
 
 # all the USE_ includes acc, gyro, flash, max, etc
-grep USE_ $source >> ${hFile}
+grep USE_ $config >> ${hFile}
 echo '' >> ${hFile}
 echo '#define USE_VCP'  >> ${hFile}
-if [[ $(grep USE_FLASH $source) ]] ; then
+if [[ $(grep USE_FLASH $config) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
 fi
-if [[ $(grep USE_MAX7456 $source) ]] ; then
+if [[ $(grep USE_MAX7456 $config) ]] ; then
     echo '#define USE_OSD' >> ${hFile}
 fi
 
 echo '' >> ${hFile}
 
 # led
-if [[ $(grep LED[0-9]_PIN $source) ]] ; then
+if [[ $(grep LED[0-9]_PIN $config) ]] ; then
     echo '#define USE_LED' >> ${hFile}
 fi
-grep "LED[0-9]_PIN" $source >> ${hFile}
+grep "LED[0-9]_PIN" $config >> ${hFile}
 
-if [[ $(grep LED_STRIP_PIN $source >> ${hFile}) ]] ; then
+if [[ $(grep LED_STRIP_PIN $config >> ${hFile}) ]] ; then
     echo '#define USE_LED_STRIP' >> ${hFile}
 fi
 
 # beeper cam-control
-if [[ $(grep BEEPER_ $source) ]] ; then
+if [[ $(grep BEEPER_ $config) ]] ; then
     echo '#define USE_BEEPER' >> ${hFile}
 fi
-grep BEEPER_PIN $source >> ${hFile}
-grep BEEPER_INVERTED $source >> ${hFile}
-grep CAMERA_CONTROL_PIN $source >> ${hFile}
-if [[ $(grep USB_DETECT_PIN $source) ]] ; then
+grep BEEPER_PIN $config >> ${hFile}
+grep BEEPER_INVERTED $config >> ${hFile}
+grep CAMERA_CONTROL_PIN $config >> ${hFile}
+if [[ $(grep USB_DETECT_PIN $config) ]] ; then
     echo '#define USE_USB_DETECT' >> ${hFile}
 fi
 echo '' >> ${hFile}
 
 # spi
-if [[ $(grep SPI $source) ]] ; then
+if [[ $(grep SPI $config) ]] ; then
     echo '#define USE_SPI' >> ${hFile}
 fi
 
 for i in {1..6}
 do
-    if [[ $(grep "SPI${i}_" $source) ]] ; then
+    if [[ $(grep "SPI${i}_" $config) ]] ; then
         echo "#define USE_SPI_DEVICE_${i}"  >> ${hFile}
     fi
-    grep SPI${i}_SCK_PIN $source >> ${hFile}
-    translate SPI${i}_SDI_PIN $source "#define SPI${i}_MOSI_PIN        $(grep SPI${i}_SDI_PIN $source | awk '{print $3}')" ${hFile}
-    translate SPI${i}_SDO_PIN $source "#define SPI${i}_MISO_PIN        $(grep SPI${i}_SDO_PIN $source | awk '{print $3}')" ${hFile}
+    grep SPI${i}_SCK_PIN $config >> ${hFile}
+    translate SPI${i}_SDI_PIN $config "#define SPI${i}_MOSI_PIN        $(grep SPI${i}_SDI_PIN $config | awk '{print $3}')" ${hFile}
+    translate SPI${i}_SDO_PIN $config "#define SPI${i}_MISO_PIN        $(grep SPI${i}_SDO_PIN $config | awk '{print $3}')" ${hFile}
 done
 echo '' >> ${hFile}
 
 # gyro defines
-if [[ $(grep -w GYRO_1_ALIGN $source) ]] ; then
-    grep -w GYRO_1_ALIGN $source >> ${hFile}  # -w avoid _ALIGN_YAW
-    G1_align=$(grep -w GYRO_1_ALIGN $source | awk -F'GYRO_1_ALIGN' '{print $2}')
+if [[ $(grep -w GYRO_1_ALIGN $config) ]] ; then
+    grep -w GYRO_1_ALIGN $config >> ${hFile}  # -w avoid _ALIGN_YAW
+    G1_align=$(grep -w GYRO_1_ALIGN $config | awk -F'GYRO_1_ALIGN' '{print $2}')
 else
     echo '#define GYRO_1_ALIGN         CW0_DEG' >> ${hFile}
     G1_align='CW0_DEG'
 fi
 echo "#define ACC_1_ALIGN          ${G1_align}" >> ${hFile}
-grep GYRO_1_CS_PIN $source >> ${hFile}
-G1_csPin=$(grep -w GYRO_1_CS_PIN $source | awk -F'GYRO_1_CS_PIN' '{print $2}')
-grep GYRO_1_EXTI_PIN $source >> ${hFile} && echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN'  >> ${hFile}
-G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $source | awk -F'GYRO_1_EXTI_PIN' '{print $2}')
-grep GYRO_1_SPI_INSTANCE $source >> ${hFile}
-G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $source | awk -F'GYRO_1_SPI_INSTANCE' '{print $2}')
+grep GYRO_1_CS_PIN $config >> ${hFile}
+G1_csPin=$(grep -w GYRO_1_CS_PIN $config | awk -F'GYRO_1_CS_PIN' '{print $2}')
+grep GYRO_1_EXTI_PIN $config >> ${hFile} && echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN'  >> ${hFile}
+G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $config | awk -F'GYRO_1_EXTI_PIN' '{print $2}')
+grep GYRO_1_SPI_INSTANCE $config >> ${hFile}
+G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F'GYRO_1_SPI_INSTANCE' '{print $2}')
 
-if [[ $(grep GYRO_1_EXTI_PIN $source) ]] ; then
+if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
     echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
     # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
 fi
 echo '' >> ${hFile}
 
 # dual gyro
-if [[ $(grep -w GYRO_2_ALIGN $source) ]] ; then
-    grep -w GYRO_2_ALIGN $source >> ${hFile}  # -w avoid _ALIGN_YAW
-elif [[ $(grep "GYRO_2_" $source) ]] ; then
+if [[ $(grep -w GYRO_2_ALIGN $config) ]] ; then
+    grep -w GYRO_2_ALIGN $config >> ${hFile}  # -w avoid _ALIGN_YAW
+elif [[ $(grep "GYRO_2_" $config) ]] ; then
     echo '#define GYRO_2_ALIGN         CW0_DEG' >> ${hFile}
 fi
-if [[ $(grep "GYRO_2_" $source) ]] ; then
+if [[ $(grep "GYRO_2_" $config) ]] ; then
     echo '#define ACC_2_ALIGN      GYRO_2_ALIGN' >> ${hFile}
 fi
-grep GYRO_2_CS_PIN $source >> ${hFile}
-grep GYRO_2_EXTI_PIN $source >> ${hFile}
-grep GYRO_2_SPI_INSTANCE $source >> ${hFile}
+grep GYRO_2_CS_PIN $config >> ${hFile}
+grep GYRO_2_EXTI_PIN $config >> ${hFile}
+grep GYRO_2_SPI_INSTANCE $config >> ${hFile}
 echo '' >> ${hFile}
 
 # dual gyro
-if [[ $(grep "GYRO_2_" $source) ]] ; then
+if [[ $(grep "GYRO_2_" $config) ]] ; then
     echo '#define USE_DUAL_GYRO' >> ${hFile}
     echo '' >> ${hFile}
 fi
 
 # exti
-if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $source) ]] ; then
+if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $config) ]] ; then
     echo '#define USE_EXTI' >> $hFile
     echo '//#define USE_GYRO_EXTI' >> $hFile
     echo '// notice - USE_GYRO_EXTI validity unknown at this time' >> $hFile
@@ -432,7 +432,7 @@ if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $source) ]] ; then
 fi
 
 # mpu
-if [[ $(grep SPI_MPU $source) ]] ; then
+if [[ $(grep SPI_MPU $config) ]] ; then
     echo '#define USE_MPU_DATA_READY_SIGNAL' >> ${hFile}
     echo '' >> ${hFile}
 fi
@@ -440,9 +440,9 @@ fi
 # MPU6000
 #define USE_ACC_SPI_MPU6000
 #define USE_GYRO_SPI_MPU6000
-if [[ $(grep SPI_MPU6000 $source) ]] ; then
+if [[ $(grep SPI_MPU6000 $config) ]] ; then
     # convert gyro1 > mpu -- this may need changing later
-    if [[ $(grep GYRO_1_SPI_INSTANCE $source) ]] ; then
+    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
         echo "#define ACC_MPU6000_ALIGN         ${G1_align}" >> $hFile
         echo "#define GYRO_MPU6000_ALIGN        ${G1_align}" >> $hFile
         echo "#define MPU6000_CS_PIN            ${G1_csPin}" >> $hFile
@@ -454,9 +454,9 @@ fi
 # MPU6500
 #define USE_ACC_SPI_MPU6500
 #define USE_GYRO_SPI_MPU6500
-if [[ $(grep SPI_MPU6500 $source) ]] ; then
+if [[ $(grep SPI_MPU6500 $config) ]] ; then
     # convert gyro1 > mpu -- this may need changing later
-    if [[ $(grep GYRO_1_SPI_INSTANCE $source) ]] ; then
+    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
         echo "#define ACC_MPU6500_ALIGN         ${G1_align}" >> $hFile
         echo "#define GYRO_MPU6500_ALIGN        ${G1_align}" >> $hFile
         echo "#define MPU6500_CS_PIN            ${G1_csPin}" >> $hFile
@@ -468,9 +468,9 @@ fi
 # ICM20689
 #define USE_ACC_SPI_ICM20689
 #define USE_GYRO_SPI_ICM20689
-if [[ $(grep SPI_ICM20689 $source) ]] ; then
+if [[ $(grep SPI_ICM20689 $config) ]] ; then
     # convert gyro1 > icm -- this may need changing later
-    if [[ $(grep GYRO_1_SPI_INSTANCE $source) ]] ; then
+    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
         echo "#define ACC_ICM20689_ALIGN         ${G1_align}" >> $hFile
         echo "#define GYRO_ICM20689_ALIGN        ${G1_align}" >> $hFile
         echo "#define ICM20689_CS_PIN            ${G1_csPin}" >> $hFile
@@ -482,9 +482,9 @@ fi
 # ICM42688P
 #define USE_GYRO_SPI_ICM42688P
 #define USE_ACC_SPI_ICM42688P
-if [[ $(grep SPI_ICM42688P $source) ]] ; then
+if [[ $(grep SPI_ICM42688P $config) ]] ; then
     # convert gyro1 > icm -- this may need changing later
-    if [[ $(grep GYRO_1_SPI_INSTANCE $source) ]] ; then
+    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
         echo "#define ACC_ICM42688P_ALIGN      ${G1_align}" >> $hFile
         echo "#define GYRO_ICM42688P_ALIGN     ${G1_align}" >> $hFile
         echo "#define ICM42688P_CS_PIN         ${G1_csPin}" >> $hFile
@@ -496,10 +496,10 @@ fi
 # BMI270
 #define USE_ACCGYRO_BMI270
 #define USE_SPI_GYRO
-if [[ $(grep ACCGYRO_BMI270 $source) ]] ; then
+if [[ $(grep ACCGYRO_BMI270 $config) ]] ; then
     # convert gyro1 > icm -- this may need changing later
     echo '#define USE_SPI_GYRO' >> $hFile
-    if [[ $(grep GYRO_1_SPI_INSTANCE $source) ]] ; then
+    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
         echo "#define ACC_BMI270_ALIGN         ${G1_align}" >> $hFile
         echo "#define GYRO_BMI270_ALIGN        ${G1_align}" >> $hFile
         echo "#define BMI270_CS_PIN            ${G1_csPin}" >> $hFile
@@ -512,63 +512,63 @@ echo '// notice - this file was programmatically generated and may need GYRO_2 m
 echo '' >> ${hFile}
 
 # i2c/baro/mag/etc
-grep -w MAG_ALIGN $source >> ${hFile}
-grep MAG_I2C_INSTANCE $source >> ${hFile}
-if [[ $(grep I2C $source) ]] ; then
+grep -w MAG_ALIGN $config >> ${hFile}
+grep MAG_I2C_INSTANCE $config >> ${hFile}
+if [[ $(grep I2C $config) ]] ; then
     echo '#define USE_I2C' >> ${hFile}
 fi
-if [[ $(grep "USE_I2C[0-4]_PULLUP" $source) ]] ; then
+if [[ $(grep "USE_I2C[0-4]_PULLUP" $config) ]] ; then
     echo '#define USE_I2C_PULLUP' >> $hFile
 fi
 for i in {1..4}
 do
-    if [[ $(grep "I2C${i}_" $source) ]] ; then
+    if [[ $(grep "I2C${i}_" $config) ]] ; then
         echo "#define USE_I2C_DEVICE_${i}"  >> ${hFile}
         echo "#define I2C_DEVICE        (I2CDEV_${i})"  >> ${hFile}
     fi
-    grep I2CDEV_${i} $source >> ${hFile}
-    if [[ $(grep "USE_I2C${i}_PULLUP ON" $source) ]] ; then
+    grep I2CDEV_${i} $config >> ${hFile}
+    if [[ $(grep "USE_I2C${i}_PULLUP ON" $config) ]] ; then
         echo "#define I2C${i}_PULLUP true" >> $hFile
     fi
-    translate "I2C${i}_OVERCLOCK ON" $source "#define I2C${i}_OVERCLOCK true" ${hFile}
-    translate "I2C${i}_SCL_PIN" $source "#define I2C${i}_SCL $(grep "I2C${i}_SCL_PIN" $source | awk '{print          $3}')" ${hFile}
-    translate "I2C${i}_SDA_PIN" $source "#define I2C${i}_SDA $(grep "I2C${i}_SDA_PIN" $source | awk '{print          $3}')" ${hFile}
+    translate "I2C${i}_OVERCLOCK ON" $config "#define I2C${i}_OVERCLOCK true" ${hFile}
+    translate "I2C${i}_SCL_PIN" $config "#define I2C${i}_SCL $(grep "I2C${i}_SCL_PIN" $config | awk '{print          $3}')" ${hFile}
+    translate "I2C${i}_SDA_PIN" $config "#define I2C${i}_SDA $(grep "I2C${i}_SDA_PIN" $config | awk '{print          $3}')" ${hFile}
 done
 echo '// notice - this file was programmatically generated and likely needs MAG/BARO manually added and/or verified.' >> ${hFile}
 echo '' >> ${hFile}
 
 ## flash
-grep FLASH_CS_PIN $source >> ${hFile}
-grep FLASH_SPI_INSTANCE $source >> ${hFile}
-translate "BLACKBOX_DEVICE_FLASH" $source '#define ENABLE_BLACKBOX_LOGGING_ON_SPIFLASH_BY_DEFAULT' ${hFile}
+grep FLASH_CS_PIN $config >> ${hFile}
+grep FLASH_SPI_INSTANCE $config >> ${hFile}
+translate "BLACKBOX_DEVICE_FLASH" $config '#define ENABLE_BLACKBOX_LOGGING_ON_SPIFLASH_BY_DEFAULT' ${hFile}
 echo '' >> ${hFile}
 
 ## gps -- skipping
 
 ## max7456
-grep MAX7456_SPI_CS_PIN $source >> ${hFile}
-grep MAX7456_SPI_INSTANCE $source >> ${hFile}
+grep MAX7456_SPI_CS_PIN $config >> ${hFile}
+grep MAX7456_SPI_INSTANCE $config >> ${hFile}
 echo '' >> ${hFile}
 
 ## vcp, uarts, softserial
 vcpserial=1
-hardserial=$(grep "UART[[:digit:]]\+_TX_PIN" $source | wc -l)
-softserial=$(grep "SOFTSERIAL[[:digit:]]_TX_PIN" $source | wc -l )
+hardserial=$(grep "UART[[:digit:]]\+_TX_PIN" $config | wc -l)
+softserial=$(grep "SOFTSERIAL[[:digit:]]_TX_PIN" $config | wc -l )
 totalserial=$(expr $hardserial + $softserial)
 for ((i=1; i<=${totalserial}; i++))
 do
     echo "#define USE_UART${i}" >> ${hFile}
 done
-grep "UART[[:digit:]]\+_TX_PIN" $source >> ${hFile}
-grep "UART[[:digit:]]\+_RX_PIN" $source >> ${hFile}
-grep "SOFTSERIAL[[:digit:]]_TX_PIN" $source >> ${hFile}
-grep "SOFTSERIAL[[:digit:]]_RX_PIN" $source >> ${hFile}
+grep "UART[[:digit:]]\+_TX_PIN" $config >> ${hFile}
+grep "UART[[:digit:]]\+_RX_PIN" $config >> ${hFile}
+grep "SOFTSERIAL[[:digit:]]_TX_PIN" $config >> ${hFile}
+grep "SOFTSERIAL[[:digit:]]_RX_PIN" $config >> ${hFile}
 for ((i=1; i<=${softserial}; i++))
 do
     echo "#define USE_SOFTSERIAL{$i}" >> ${hFile}
 done
-grep "INVERTER_PIN_UART" $source >> ${hFile}
-grep "USART" $source >> ${hFile}
+grep "INVERTER_PIN_UART" $config >> ${hFile}
+grep "USART" $config >> ${hFile}
 echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)"  >> ${hFile}
 echo '// notice - UART/USART were programmatically generated - should verify UART/USART.' >> ${hFile}
 echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
@@ -577,8 +577,8 @@ echo '// notice - should verify serial count.' >> ${hFile}
 echo '' >> ${hFile}
 
 # RX SPI & inverted RX SPI LED
-grep "RX_SPI_EXTI_PIN" $source >> ${hFile}
-if [[ $(grep RX_SPI_LED_INVERTED $source) ]] ; then
+grep "RX_SPI_EXTI_PIN" $config >> ${hFile}
+if [[ $(grep RX_SPI_LED_INVERTED $config) ]] ; then
     echo '#define RX_CC2500_SPI_LED_PIN_INVERTED' >> $hFile
     echo '#define RX_FRSKY_SPI_LED_PIN_INVERTED' >> $hFile
     echo '// notice - this needs to be verified' >> $hFile
@@ -586,67 +586,67 @@ if [[ $(grep RX_SPI_LED_INVERTED $source) ]] ; then
 fi
 
 ## adc, default voltage/current, scale
-translate "ADC_VBAT_PIN" $source "#define VBAT_ADC_PIN $(grep "ADC_VBAT_PIN" $source | awk '{print          $3}')" ${hFile}
-translate "ADC_CURR_PIN" $source "#define CURRENT_METER_ADC_PIN $(grep "ADC_CURR_PIN" $source | awk '{print          $3}')" ${hFile}
-translate "ADC_RSSI_PIN" $source "#define RSSI_ADC_PIN $(grep "ADC_RSSI_PIN" $source | awk '{print          $3}')" ${hFile}
+translate "ADC_VBAT_PIN" $config "#define VBAT_ADC_PIN $(grep "ADC_VBAT_PIN" $config | awk '{print          $3}')" ${hFile}
+translate "ADC_CURR_PIN" $config "#define CURRENT_METER_ADC_PIN $(grep "ADC_CURR_PIN" $config | awk '{print          $3}')" ${hFile}
+translate "ADC_RSSI_PIN" $config "#define RSSI_ADC_PIN $(grep "ADC_RSSI_PIN" $config | awk '{print          $3}')" ${hFile}
 for i in {1..4}
 do
-    translate "ADC${i}_DMA_OPT" $source "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - DMA2_Stream0 likely need correcting, please modify." ${hFile}
+    translate "ADC${i}_DMA_OPT" $config "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - DMA2_Stream0 likely need correcting, please modify." ${hFile}
 done
 echo ' // notice - DMA conversions incomplete - needs human modifications. e.g. ADC_INSTANCE, ADC3_DMA_OPT, CURRENT_METER_ADC_PIN, etc.'
-grep "DEFAULT_VOLTAGE_METER_SOURCE" $source >> ${hFile}
-grep "DEFAULT_CURRENT_METER_SOURCE" $source >> ${hFile}
-grep DEFAULT_CURRENT_METER_SCALE $source >> ${hFile}
-grep ADC_INSTANCE $source >> ${hFile}
+grep "DEFAULT_VOLTAGE_METER_config" $config >> ${hFile}
+grep "DEFAULT_CURRENT_METER_config" $config >> ${hFile}
+grep DEFAULT_CURRENT_METER_SCALE $config >> ${hFile}
+grep ADC_INSTANCE $config >> ${hFile}
 echo '' >> ${hFile}
 
 ## dshot
-translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_ON" $source "#define ENABLE_DSHOT_DMAR true" ${hFile}
+translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_ON" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
 
 ## esc serial timer
-if [[ $(grep ESCSERIAL $source) ]] ; then
+if [[ $(grep ESCSERIAL $config) ]] ; then
     echo '#define USE_ESCSERIAL' >> ${hFile}
-    translate "ESCSERIAL_PIN" $source "#define ESCSERIAL_TIMER_TX_PIN $(grep "ESCSERIAL_PIN" $source | awk '{print          $3}')" ${hFile}
+    translate "ESCSERIAL_PIN" $config "#define ESCSERIAL_TIMER_TX_PIN $(grep "ESCSERIAL_PIN" $config | awk '{print          $3}')" ${hFile}
     echo '' >> ${hFile}
 fi
 
 # pinio
-if [[ $(grep 'PINIO[0-9]_' $source >> ${hFile}) ]] ; then
+if [[ $(grep 'PINIO[0-9]_' $config >> ${hFile}) ]] ; then
     echo '' >> $hFile
 fi
 
 # inverted sdcard
-grep SDCARD_DETECT_INVERTED $source >> ${hFile}
+grep SDCARD_DETECT_INVERTED $config >> ${hFile}
 
 # inverted button
-grep "BUTTON_[AB]_PIN_INVERTED" $source >> ${hFile}
+grep "BUTTON_[AB]_PIN_INVERTED" $config >> ${hFile}
 
-echo '// notice - this file was programmatically generated and may not have accounted for any source instance of "#define TLM_INVERTED ON", etc.' >> ${hFile}
+echo '// notice - this file was programmatically generated and may not have accounted for any config instance of "#define TLM_INVERTED ON", etc.' >> ${hFile}
 echo ''  >> ${hFile}
 
 # port masks
-if [[ $(grep ' PA[0-9]' $source) ]]; then
+if [[ $(grep ' PA[0-9]' $config) ]]; then
     echo '#define TARGET_IO_PORTA 0xffff' >> ${hFile}
 fi
-if [[ $(grep ' PB[0-9]' $source) ]]; then
+if [[ $(grep ' PB[0-9]' $config) ]]; then
     echo '#define TARGET_IO_PORTB 0xffff' >> ${hFile}
 fi
-if [[ $(grep ' PB[0-9]' $source) ]]; then
+if [[ $(grep ' PB[0-9]' $config) ]]; then
     echo '#define TARGET_IO_PORTC 0xffff' >> ${hFile}
 fi
-if [[ $(grep ' PD[0-9]' $source) ]]; then
+if [[ $(grep ' PD[0-9]' $config) ]]; then
     echo '#define TARGET_IO_PORTD 0xffff' >> ${hFile}
 fi
-if [[ $(grep ' PE[0-9]' $source) ]]; then
+if [[ $(grep ' PE[0-9]' $config) ]]; then
     echo '#define TARGET_IO_PORTE 0xffff' >> ${hFile}
 fi
-if [[ $(grep ' PF[0-9]' $source) ]]; then
+if [[ $(grep ' PF[0-9]' $config) ]]; then
     echo '#define TARGET_IO_PORTF 0xffff' >> ${hFile}
 fi
-if [[ $(grep ' PG[0-9]' $source) ]]; then
+if [[ $(grep ' PG[0-9]' $config) ]]; then
     echo '#define TARGET_IO_PORTG 0xffff' >> ${hFile}
 fi
-if [[ $(grep ' PH[0-9]' $source) ]]; then
+if [[ $(grep ' PH[0-9]' $config) ]]; then
     echo '#define TARGET_IO_PORTH 0xffff' >> ${hFile}
 fi
 echo '// notice - masks were programmatically generated - must verify last port group for 0xffff or (BIT(2))'  >> ${hFile}
@@ -657,7 +657,7 @@ echo '#define DEFAULT_RX_FEATURE     FEATURE_RX_SERIAL' >> ${hFile}
 echo '// notice - incomplete; may need additional DEFAULT_FEATURES; e.g. FEATURE_SOFTSERIAL | FEATURE_RX_SPI' >> ${hFile}
 echo '' >> ${hFile}
 
-echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep -c 'TIMER_PIN_MAP(' ${source} )" >> ${hFile}
+echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep -c 'TIMER_PIN_MAP(' ${config} )" >> ${hFile}
 # to do: logic
 echo '#define USED_TIMERS ( TIM_N(x) | TIM_N(x) | TIM_N(x) | TIM_N(x) | TIM_N(x) )' >> ${hFile}
 echo '// notice - incomplete. add/remove/replace x' >> ${hFile}
@@ -671,4 +671,4 @@ sed '/"TODO"/d' -i ${hFile}
 echo 'Task finished. No guarantees; Definitions are likely incomplete.'
 echo 'Please search the resultant files for the keyword "notice" to rectify any needs.'
 echo "Folder: ${dest}"
-ls -lh "${dest}"
+ls -lh "${dest}"/target.*
