@@ -311,9 +311,15 @@ echo '// TIM_USE_PWM' >> ${cFile}
 echo '// TIM_USE_SERVO' >> ${cFile}
 echo '// TIM_USE_TRANSPONDER' >> ${cFile}
 echo '' >> ${cFile}
-echo '// config.h reconfigs:' >> ${cFile}
+
+echo '// config.h timers' >> ${cFile}
 grep "MOTOR[[:digit:]]\+_PIN" $config | xargs -d'\n' --replace echo "// {}" >> ${cFile}
 grep TIMER_PIN_MAP $config | xargs -d'\n' --replace echo "// {}" >> ${cFile}
+echo ''  >> ${cFile}
+echo '// unified timers' >> ${cFile}
+echo '//# timer' >> ${cFile}
+grep -A1 'timer ' $unified | xargs -d'\n' --replace echo "// {}" >> ${cFile}
+grep -A1 'dma pin ' $unified | xargs -d'\n' --replace echo "// {}" >> ${cFile}
 
 echo '' >> ${cFile}
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${cFile}
@@ -566,6 +572,7 @@ for ((i=1; i<=${softserial}; i++))
 do
     echo "#define USE_SOFTSERIAL{$i}" >> ${hFile}
 done
+grep 'RX_PPM_PIN' $config >> ${hFile}
 grep "INVERTER_PIN_UART" $config >> ${hFile}
 grep "USART" $config >> ${hFile}
 echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)"  >> ${hFile}
@@ -661,6 +668,7 @@ echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep -c 'TIMER_PIN_MAP(' ${config} )"
 echo '#define USED_TIMERS ( TIM_N(x) | TIM_N(x) | TIM_N(x) | TIM_N(x) | TIM_N(x) )' >> ${hFile}
 echo '// notice - incomplete. add/remove/replace x' >> ${hFile}
 echo '' >> ${hFile}
+echo 'Please modify USED_TIMERS in .h file'
 
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${hFile}
 
@@ -670,4 +678,4 @@ sed '/"TODO"/d' -i ${hFile}
 echo 'Task finished. No guarantees; Definitions are likely incomplete.'
 echo 'Please search the resultant files for the keyword "notice" to rectify any needs.'
 echo "Folder: ${dest}"
-ls -lh "${dest}"/target.*
+ls -lh "${dest}"
