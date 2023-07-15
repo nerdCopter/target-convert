@@ -381,8 +381,8 @@ do
         echo "#define USE_SPI_DEVICE_${i}"  >> ${hFile}
     fi
     grep SPI${i}_SCK_PIN $config >> ${hFile}
-    translate SPI${i}_SDI_PIN $config "#define SPI${i}_MOSI_PIN        $(grep SPI${i}_SDI_PIN $config | awk '{print $3}')" ${hFile}
-    translate SPI${i}_SDO_PIN $config "#define SPI${i}_MISO_PIN        $(grep SPI${i}_SDO_PIN $config | awk '{print $3}')" ${hFile}
+    translate SPI${i}_SDI_PIN $config "#define SPI${i}_MISO_PIN        $(grep SPI${i}_SDI_PIN $config | awk '{print $3}')" ${hFile}
+    translate SPI${i}_SDO_PIN $config "#define SPI${i}_MOSI_PIN        $(grep SPI${i}_SDO_PIN $config | awk '{print $3}')" ${hFile}
 done
 echo '' >> ${hFile}
 
@@ -600,14 +600,15 @@ do
     translate "ADC${i}_DMA_OPT" $config "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - DMA2_Stream0 likely need correcting, please modify." ${hFile}
 done
 echo ' // notice - DMA conversions incomplete - needs human modifications. e.g. ADC_INSTANCE, ADC3_DMA_OPT, CURRENT_METER_ADC_PIN, etc.'  >> ${hFile}
-grep "DEFAULT_VOLTAGE_METER_config" $config >> ${hFile}
-grep "DEFAULT_CURRENT_METER_config" $config >> ${hFile}
+grep "DEFAULT_VOLTAGE_METER_SOURCE" $config >> ${hFile}
+grep "DEFAULT_CURRENT_METER_SOURCE" $config >> ${hFile}
 grep DEFAULT_CURRENT_METER_SCALE $config >> ${hFile}
 grep ADC_INSTANCE $config >> ${hFile}
 echo '' >> ${hFile}
 
 ## dshot
 translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_ON" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
+translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_AUTO" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
 
 ## esc serial timer
 if [[ $(grep ESCSERIAL $config) ]] ; then
