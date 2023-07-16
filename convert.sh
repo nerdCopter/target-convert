@@ -341,6 +341,10 @@ echo '' >> ${hFile}
 echo '#define USE_VCP'  >> ${hFile}
 if [[ $(grep USE_FLASH $config) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
+    echo '#define USE_FLASH_M25P16  //testing' >> ${hFile}
+    echo '#define USE_FLASH_W25M    //testing' >> ${hFile}
+    echo '#define USE_FLASH_W25M512 //testing' >> ${hFile}
+    echo '#define USE_FLASH_W25Q    //testing' >> ${hFile}
 fi
 if [[ $(grep USE_MAX7456 $config) ]] ; then
     echo '#define USE_OSD' >> ${hFile}
@@ -597,25 +601,26 @@ translate "ADC_CURR_PIN" $config "#define CURRENT_METER_ADC_PIN $(grep "ADC_CURR
 translate "ADC_RSSI_PIN" $config "#define RSSI_ADC_PIN $(grep "ADC_RSSI_PIN" $config | awk '{print          $3}')" ${hFile}
 for i in {1..4}
 do
-    translate "ADC${i}_DMA_OPT" $config "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - DMA2_Stream0 likely need correcting, please modify." ${hFile}
+    translate "ADC${i}_DMA_OPT" $config "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - DMA2_Stream0 likely wrong - found in unified-target." ${hFile}
+    translate "ADC ${i}: DMA" $unified "// $(grep "ADC ${i}: DMA" $unified) // notice - use this for above define." ${hFile}
 done
-echo ' // notice - DMA conversions incomplete - needs human modifications. e.g. ADC_INSTANCE, ADC3_DMA_OPT, CURRENT_METER_ADC_PIN, etc.'  >> ${hFile}
 grep "DEFAULT_VOLTAGE_METER_SOURCE" $config >> ${hFile}
 grep "DEFAULT_CURRENT_METER_SOURCE" $config >> ${hFile}
 grep DEFAULT_CURRENT_METER_SCALE $config >> ${hFile}
 grep ADC_INSTANCE $config >> ${hFile}
+echo '// notice - DMA conversions incomplete - needs human modifications. e.g. ADC_INSTANCE, ADC3_DMA_OPT, etc.'  >> ${hFile}
 echo '' >> ${hFile}
 
 ## dshot
 translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_ON" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
-translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_AUTO" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
+#translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_AUTO" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
 
 ## esc serial timer
 if [[ $(grep ESCSERIAL $config) ]] ; then
     echo '#define USE_ESCSERIAL' >> ${hFile}
     translate "ESCSERIAL_PIN" $config "#define ESCSERIAL_TIMER_TX_PIN $(grep "ESCSERIAL_PIN" $config | awk '{print          $3}')" ${hFile}
-    echo '' >> ${hFile}
 fi
+echo ''  >> ${hFile}
 
 # pinio
 if [[ $(grep 'PINIO[0-9]_' $config >> ${hFile}) ]] ; then
