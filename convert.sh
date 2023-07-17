@@ -393,18 +393,18 @@ echo '' >> ${hFile}
 # gyro defines
 if [[ $(grep -w GYRO_1_ALIGN $config) ]] ; then
     grep -w GYRO_1_ALIGN $config >> ${hFile}  # -w avoid _ALIGN_YAW
-    G1_align=$(grep -w GYRO_1_ALIGN $config | awk -F'GYRO_1_ALIGN' '{print $2}')
+    G1_align=$(grep -w GYRO_1_ALIGN $config | awk -F' ' '{print $3}')
 else
     echo '#define GYRO_1_ALIGN         CW0_DEG' >> ${hFile}
     G1_align='CW0_DEG'
 fi
 echo "#define ACC_1_ALIGN          ${G1_align}" >> ${hFile}
 grep GYRO_1_CS_PIN $config >> ${hFile}
-G1_csPin=$(grep -w GYRO_1_CS_PIN $config | awk -F'GYRO_1_CS_PIN' '{print $2}')
+G1_csPin=$(grep -w GYRO_1_CS_PIN $config | awk -F' ' '{print $3}')
 grep GYRO_1_EXTI_PIN $config >> ${hFile} && echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN'  >> ${hFile}
-G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $config | awk -F'GYRO_1_EXTI_PIN' '{print $2}')
+G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $config | awk -F' ' '{print $3}')
 grep GYRO_1_SPI_INSTANCE $config >> ${hFile}
-G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F'GYRO_1_SPI_INSTANCE' '{print $2}')
+G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}')
 
 if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
     echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
