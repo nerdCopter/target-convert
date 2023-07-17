@@ -608,7 +608,7 @@ grep "DEFAULT_VOLTAGE_METER_SOURCE" $config >> ${hFile}
 grep "DEFAULT_CURRENT_METER_SOURCE" $config >> ${hFile}
 grep DEFAULT_CURRENT_METER_SCALE $config >> ${hFile}
 grep ADC_INSTANCE $config >> ${hFile}
-echo '// notice - DMA conversions incomplete - needs human modifications. e.g. ADC_INSTANCE, ADC3_DMA_OPT, etc.'  >> ${hFile}
+echo '// notice - DMA conversion were programmatically generated and may be incomplete.'  >> ${hFile}
 echo '' >> ${hFile}
 
 ## dshot
