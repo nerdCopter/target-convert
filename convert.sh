@@ -669,10 +669,21 @@ echo '#define DEFAULT_RX_FEATURE     FEATURE_RX_SERIAL' >> ${hFile}
 echo '// notice - incomplete; may need additional DEFAULT_FEATURES; e.g. FEATURE_SOFTSERIAL | FEATURE_RX_SPI' >> ${hFile}
 echo '' >> ${hFile}
 
+# used timers
+usedTimers=''
+for i in {1..20}
+do
+    if [[ $(grep "TIM${i} CH" $unified) ]] ; then
+        if ! [[ $usedTimers == '' ]] ; then
+            usedTimers+="|"
+        fi
+        usedTimers+=" TIM_N(${i}) "
+    fi
+done
 echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep -c 'TIMER_PIN_MAP(' ${config} )" >> ${hFile}
 # to do: logic
-echo '#define USED_TIMERS ( TIM_N(x) | TIM_N(x) | TIM_N(x) | TIM_N(x) | TIM_N(x) )' >> ${hFile}
-echo '// notice - incomplete. add/remove/replace x' >> ${hFile}
+echo "#define USED_TIMERS (${usedTimers})" >> ${hFile}
+echo '// notice - USED_TIMERS were programmatically generated from unified-target and may be incomplete.' >> ${hFile}
 echo '' >> ${hFile}
 echo 'Please modify USED_TIMERS in .h file'
 
