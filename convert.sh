@@ -99,6 +99,7 @@ echo "unified: ${unified}"
 mkFile="${dest}/target.mk"
 cFile="${dest}/target.c"
 hFile="${dest}/target.h"
+tFile="${dest}/timers.txt"
 
 function translate () {
     local search="$1"
@@ -111,6 +112,7 @@ function translate () {
 }
 
 # create target.mk file
+echo "building ${mkFile}"
 
 # setup STM32 type
 # BF:
@@ -134,6 +136,17 @@ function translate () {
 # F7X2RE_TARGETS
 # F7X5XG_TARGETS
 # F7X6XG_TARGETS
+
+# strictly notes / from inav
+# F4_TARGETS      = $(F405_TARGETS) $(F411_TARGETS) $(F446_TARGETS)
+# F7_TARGETS      = $(F7X2RE_TARGETS) $(F7X5XE_TARGETS) $(F7X5XG_TARGETS) $(F7X5XI_TARGETS) $(F7X6XG_TARGETS)
+
+# strictly notes / from brainfpv
+# 128K_TARGETS  = $(F1_TARGETS)
+# 256K_TARGETS  = $(F3_TARGETS)
+# 512K_TARGETS  = $(F411_TARGETS) $(F7X2RE_TARGETS) $(F7X5XE_TARGETS) $(F446_TARGETS)
+# 1024K_TARGETS = $(F405_TARGETS) $(F7X5XG_TARGETS) $(F7X6XG_TARGETS)
+# 2048K_TARGETS = $(F7X5XI_TARGETS)
 
 if [[ $(grep STM32F405 $config) ]]; then
     echo 'F405_TARGETS   += $(TARGET)' > ${mkFile}
@@ -194,6 +207,7 @@ echo 'TARGET_SRC = \' >> ${mkFile}
 # drivers/accgyro_legacy/accgyro_l3gd20.c \
 # drivers/accgyro_legacy/accgyro_lsm303dlhc.c \
 
+echo 'adding drivers'
 translate MPU ${config} 'drivers/accgyro/accgyro_mpu.c \' ${mkFile}
 
 translate USE_GYRO_SPI_MPU6000 ${config} 'drivers/accgyro/accgyro_spi_mpu6000.c \' ${mkFile}
@@ -238,7 +252,6 @@ translate USE_ACCGYRO_BMI270 ${config} 'drivers/accgyro/accgyro_spi_bmi270.c \' 
 # drivers/barometer/barometer_bmp085.c
 # drivers/barometer/barometer_bmp280.c
 # drivers/barometer/barometer_fake.c
-# drivers/barometer/barometer.h
 # drivers/barometer/barometer_lps.c
 # drivers/barometer/barometer_ms5611.c
 # drivers/barometer/barometer_qmp6988.c
@@ -273,15 +286,15 @@ translate LED_STRIP ${config} 'drivers/light_ws2811strip.c \' ${mkFile}
 # pinio
 translate PINIO ${config} 'drivers/pinio.c \' ${mkFile}
 
-
 # OSD is final driver
 echo 'drivers/max7456.c \' >> ${mkFile}
 
 echo '' >> ${mkFile}
 echo '# notice - this file was programmatically generated and may be incomplete.' >> ${mkFile}
-echo '#  eg: flash, compass, barometer, vtx6705, ledstrip, pinio, etc.' >> ${mkFile}
+echo '# eg: flash, compass, barometer, vtx6705, ledstrip, pinio, etc.   especially mag/baro' >> ${mkFile}
 
 # create target.c file
+echo "building ${cFile}"
 
 echo "${license}" > ${cFile}
 
@@ -292,40 +305,168 @@ echo '#include "drivers/dma.h"' >> ${cFile}
 echo '#include "drivers/timer.h"' >> ${cFile}
 echo '#include "drivers/timer_def.h"' >> ${cFile}
 echo ''  >> ${cFile}
+
+# DEF_TIM
+pinArray=($(grep "TIM[0-9]* CH" $unified | awk -F' ' '{print $3}' | sed s/://)) #col 3 contains colon to be stripped
+timerArray=($(grep "TIM[0-9]* CH" $unified | awk -F' ' '{print $4}'))
+channelArray=($(grep "TIM[0-9]* CH" $unified | awk -F' ' '{print $5}'))
+pinCount=${#pinArray[@]}
+timerCount=${#timerArray[@]}
+channelCount=${#channelArray[@]}
+# debug to screen
+#echo "pinCount: $pinCount"
+#echo "timerCount: $timerCount"
+#echo "channelCount: $channelCount"
+
+#tranlate pin syntax
+for (( i = 0; i <= $pinCount-1; i++ ))
+do
+    # specialized 0-trim
+    covertedPinArray[$i]="P$(echo ${pinArray[$i]} | sed -E 's/^([A-Z])0?([0-9]+)/\1\2/')"
+    # debug to screen
+    #echo "pin: ${pinArray[$i]} (${covertedPinArray[$i]}) timer: ${timerArray[$i]} channel: ${channelArray[$i]}"
+done
+
+# debug to screen
+# grep 'dma pin ' $unified
+
+motorsArray=($(grep "resource MOTOR " $unified | awk -F' ' '{print $3}'))
+motorsPINArray=($(grep "resource MOTOR " $unified | awk -F' ' '{print $4}'))
+motorsCount=${#motorsArray[@]}
+motorsPINCount=${#motorsPINArray[@]}
+# debug to screen
+#echo "motorsCount: $motorsCount"
+#echo "motorsPINCount: $motorsPINCount"
+
+# EmuF TIM_USE_ options:
+# TIM_USE_ANY
+# TIM_USE_BEEPER
+# TIM_USE_LED
+# TIM_USE_MOTOR
+# TIM_USE_NONE
+# TIM_USE_PPM
+# TIM_USE_PWM
+# TIM_USE_SERVO
+# TIM_USE_TRANSPONDER
+
+# above was data reading, so now perform output
 echo 'const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {' >> ${cFile}
-echo '/* notice - incomplete */'  >> ${cFile}
-echo '// format : DEF_TIM(TIMxx, CHx, Pxx, TIM_USE_xxxxxxx, 0, x), //comment' >> ${cFile}
+for (( i = 1; i <= $motorsCount; i++ ))
+do
+    echo "building DEF_TIM for motor $i : ${motorsPINArray[$i-1]} (${covertedPinArray[$i]})"
+    timer=""
+    channel=""
+    dma=""
+    for (( j = 0; j <= $pinCount; j++ )) ; do
+        # match motor pin/timer/chan/dma
+        # debug to screen
+        #echo "motor $i ${motorsPINArray[$i-1]} (${covertedPinArray[$i]})" #motors[0] is motorNumber1
+        #echo "${motorsPINArray[$i-1]} == ${pinArray[$j]} ?? >> ${timerArray[$j]} & ${channelArray[$j]}"
+        if [[ "${motorsPINArray[$i-1]}" == "${pinArray[$j]}" ]] ; then
+            # debug to screen
+            #echo "found ^"
+            timer="${timerArray[$j]}"
+            channel="${channelArray[$j]}"
+            dma=$(grep "dma pin ${motorsPINArray[$i-1]}" $unified | awk -F' ' '{print $4}')
+            break # stop at motor ${j}
+        fi
+    done;
+    echo "DEF_TIM(${timer}, ${channel}, ${covertedPinArray[$i]}, TIM_USE_MOTOR, 0, ${dma}) // motor ${i}" >> ${cFile}
+    # debug to screen
+    #echo "DEF_TIM(${timer}, ${channel}, ${covertedPinArray[$i]}, TIM_USE_MOTOR, 0, ${dma}) // motor ${i}"
+
+    # remove pin $j (motor $i) we dont need it anymore (syntax: unset 'array[x]')
+    unset 'pinArray[j]' 
+    unset 'timerArray[j]'
+    unset 'channelArray[j]'
+    unset 'covertedPinArray[j]'
+done
+
+#compact arrays after unsets / very important
+pinArray=("${pinArray[@]}")
+timerArray=("${timerArray[@]}")
+channelArray=("${channelArray[@]}")
+covertedPinArray=("${covertedPinArray[@]}")
+#new array sizes
+pinCount=${#pinArray[@]}
+timerCount=${#timerArray[@]}
+channelCount=${#channelArray[@]}
+# debug to screen
+#echo "pinCount: $pinCount"
+#echo "timerCount: $timerCount"
+#echo "channelCount: $channelCount"
+
+# build remaining non-motor timers
+for (( i = 0; i <= $pinCount-1; i++ ))
+do
+    echo "building DEF_TIM for pin ${pinArray[$i]} (${covertedPinArray[$i]})"
+    timer="${timerArray[$i]}"
+    channel="${channelArray[$i]}"
+    dma=$(grep "dma pin ${pinArray[$i]}" $unified | awk -F' ' '{print $4}')
+    ppm=$(grep "${pinArray[$i]}" $unified | grep PPM)
+    led=$(grep "${pinArray[$i]}" $unified | grep LED)
+    cam=$(grep "${pinArray[$i]}" $unified | grep CAMERA)
+    baro=$(grep "${pinArray[$i]}" $unified | grep BARO)
+    if [[ $ppm ]] ; then
+        timUse="TIM_USE_PPM"
+        comment="ppm"
+    elif [[ $led ]] ; then
+        timUse="TIM_USE_LED"
+        comment="led"
+    elif [[ $cam ]] ; then
+        timUse="TIM_USE_ANY"
+        comment="cam ctrl"
+    elif [[ $baro ]] ; then
+        timUse="TIM_USE_ANY"
+        comment="baro"
+    else
+        timUse="TIM_USE_ANY"
+        comment="could not determine TIM_USE_xxxxx - please check"
+    fi
+    echo "DEF_TIM(${timer}, ${channel}, ${covertedPinArray[$i]}, ${timUse}, 0, ${dma}) // ${comment}" >> ${cFile}
+    # debug to screen
+    #echo "DEF_TIM(${timer}, ${channel}, ${covertedPinArray[$i]}, ${timUse}, 0, ${dma}) // ${comment}"
+done
 echo '};' >> ${cFile}
 echo '' >> ${cFile}
 
-echo "not converting timers: target.c needs user translation from unified-targets. please reference associated unified-target."
-
-echo '// TIM_USE options:' >> ${cFile}
-echo '// TIM_USE_ANY' >> ${cFile}
-echo '// TIM_USE_BEEPER' >> ${cFile}
-echo '// TIM_USE_LED' >> ${cFile}
-echo '// TIM_USE_MOTOR' >> ${cFile}
-echo '// TIM_USE_NONE' >> ${cFile}
-echo '// TIM_USE_PPM' >> ${cFile}
-echo '// TIM_USE_PWM' >> ${cFile}
-echo '// TIM_USE_SERVO' >> ${cFile}
-echo '// TIM_USE_TRANSPONDER' >> ${cFile}
-echo '' >> ${cFile}
-
-echo '// config.h timers' >> ${cFile}
-grep "MOTOR[[:digit:]]\+_PIN" $config | xargs -d'\n' --replace echo "// {}" >> ${cFile}
-grep TIMER_PIN_MAP $config | xargs -d'\n' --replace echo "// {}" >> ${cFile}
-echo ''  >> ${cFile}
-echo '// unified timers' >> ${cFile}
-echo '//# timer' >> ${cFile}
-grep -A1 'timer ' $unified | xargs -d'\n' --replace echo "// {}" >> ${cFile}
-grep -A1 'dma pin ' $unified | xargs -d'\n' --replace echo "// {}" >> ${cFile}
+echo '// notice - DEF_TIM was programmatically generated and may be wrong or incomplete.' >> ${cFile}
+echo '//          please reference associated unified-target.' >> ${cFile}
+echo '//          some timers may associate with multiple pins. e.g baro/flash' >> ${cFile}
 
 echo '' >> ${cFile}
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${cFile}
 echo '// recommend converting timers from unified-target; however, unified-targets will be sunsetted.' >> ${cFile}
+echo '' >> ${cFile}
+
+# timers.txt file for quick reference
+echo '// timers for target.c' > ${tFile}
+echo '// format : DEF_TIM(TIMxx, CHx, Pxx, TIM_USE_xxxxxxx, 0, x), //comment' >> ${tFile}
+echo '' >> ${tFile}
+echo 'TIM_USE options:' >> ${tFile}
+echo 'TIM_USE_ANY' >> ${tFile}
+echo 'TIM_USE_BEEPER' >> ${tFile}
+echo 'TIM_USE_LED' >> ${tFile}
+echo 'TIM_USE_MOTOR' >> ${tFile}
+echo 'TIM_USE_NONE' >> ${tFile}
+echo 'TIM_USE_PPM' >> ${tFile}
+echo 'TIM_USE_PWM' >> ${tFile}
+echo 'TIM_USE_SERVO' >> ${tFile}
+echo 'TIM_USE_TRANSPONDER' >> ${tFile}
+echo '' >> ${tFile}
+echo '// config.h timers' >> ${tFile}
+grep "MOTOR[[:digit:]]\+_PIN" $config | xargs -d'\n' --replace echo "{}" >> ${tFile}
+echo '' >> ${tFile}
+grep TIMER_PIN_MAP $config | xargs -d'\n' --replace echo "{}" >> ${tFile}
+echo ''  >> ${tFile}
+echo '// unified timers' >> ${tFile}
+echo '# timer' >> ${tFile}
+grep -A1 'timer ' $unified | xargs -d'\n' --replace echo "{}" >> ${tFile}
+echo ''  >> ${tFile}
+grep -A1 'dma pin ' $unified | xargs -d'\n' --replace echo "{}" >> ${tFile}
 
 # create target.h file
+echo "building ${hFile}"
 
 echo "${license}" > ${hFile}
 echo '#pragma once' >> ${hFile}
@@ -336,6 +477,7 @@ translate BOARD_NAME $config "#define USBD_PRODUCT_STRING \"$(grep BOARD_NAME $c
 echo '' >> ${hFile}
 
 # all the USE_ includes acc, gyro, flash, max, etc
+echo "building USE_"
 grep USE_ $config >> ${hFile}
 echo '' >> ${hFile}
 echo '#define USE_VCP'  >> ${hFile}
@@ -353,6 +495,7 @@ fi
 echo '' >> ${hFile}
 
 # led
+echo "building LED"
 if [[ $(grep LED[0-9]_PIN $config) ]] ; then
     echo '#define USE_LED' >> ${hFile}
 fi
@@ -362,7 +505,8 @@ if [[ $(grep LED_STRIP_PIN $config >> ${hFile}) ]] ; then
     echo '#define USE_LED_STRIP' >> ${hFile}
 fi
 
-# beeper cam-control
+# beeper, cam-control, usb
+echo "building beeper, cam, usb"
 if [[ $(grep BEEPER_ $config) ]] ; then
     echo '#define USE_BEEPER' >> ${hFile}
 fi
@@ -375,6 +519,7 @@ fi
 echo '' >> ${hFile}
 
 # spi
+echo "building SPI"
 if [[ $(grep SPI $config) ]] ; then
     echo '#define USE_SPI' >> ${hFile}
 fi
@@ -391,6 +536,7 @@ done
 echo '' >> ${hFile}
 
 # gyro defines
+echo "building GYRO"
 if [[ $(grep -w GYRO_1_ALIGN $config) ]] ; then
     grep -w GYRO_1_ALIGN $config >> ${hFile}  # -w avoid _ALIGN_YAW
     G1_align=$(grep -w GYRO_1_ALIGN $config | awk -F' ' '{print $3}')
@@ -443,6 +589,7 @@ fi
 # mpu
 if [[ $(grep SPI_MPU $config) ]] ; then
     echo '#define USE_MPU_DATA_READY_SIGNAL' >> ${hFile}
+    grep ENSURE_MPU_DATA_READY_IS_LOW $config >> ${hFile}
     echo '' >> ${hFile}
 fi
 
@@ -521,6 +668,7 @@ echo '// notice - this file was programmatically generated and may need GYRO_2 m
 echo '' >> ${hFile}
 
 # i2c/baro/mag/etc
+echo "building I2C (BARO, MAG, etc)"
 grep -w MAG_ALIGN $config >> ${hFile}
 grep MAG_I2C_INSTANCE $config >> ${hFile}
 if [[ $(grep I2C $config) ]] ; then
@@ -544,22 +692,27 @@ do
     translate "I2C${i}_SDA_PIN" $config "#define I2C${i}_SDA $(grep "I2C${i}_SDA_PIN" $config | awk '{print          $3}')" ${hFile}
 done
 echo '// notice - this file was programmatically generated and likely needs MAG/BARO manually added and/or verified.' >> ${hFile}
+echo '//           e.g. USE_BARO_xxxxxx, USE_BARO_SPI_xxxxxx, DEFAULT_BARO_SPI_xxxxxx, xxxxxx_CS_PIN, xxxxxx_SPI_INSTANCE' >> ${hFile}
 echo '' >> ${hFile}
 
 ## flash
+echo "building FLASH"
 grep FLASH_CS_PIN $config >> ${hFile}
 grep FLASH_SPI_INSTANCE $config >> ${hFile}
 translate "BLACKBOX_DEVICE_FLASH" $config '#define ENABLE_BLACKBOX_LOGGING_ON_SPIFLASH_BY_DEFAULT' ${hFile}
 echo '' >> ${hFile}
 
 ## gps -- skipping
+echo "skipping GPS"
 
 ## max7456
+echo "building MAX7456"
 grep MAX7456_SPI_CS_PIN $config >> ${hFile}
 grep MAX7456_SPI_INSTANCE $config >> ${hFile}
 echo '' >> ${hFile}
 
 ## vcp, uarts, softserial
+echo "building UART(RX/TX), VCP, and serial-count"
 vcpserial=1
 hardserial=$(grep "UART[[:digit:]]\+_TX_PIN" $config | wc -l)
 softserial=$(grep "SOFTSERIAL[[:digit:]]_TX_PIN" $config | wc -l )
@@ -596,6 +749,7 @@ if [[ $(grep RX_SPI_LED_INVERTED $config) ]] ; then
 fi
 
 ## adc, default voltage/current, scale
+echo "building ADC"
 translate "ADC_VBAT_PIN" $config "#define VBAT_ADC_PIN $(grep "ADC_VBAT_PIN" $config | awk '{print          $3}')" ${hFile}
 translate "ADC_CURR_PIN" $config "#define CURRENT_METER_ADC_PIN $(grep "ADC_CURR_PIN" $config | awk '{print          $3}')" ${hFile}
 translate "ADC_RSSI_PIN" $config "#define RSSI_ADC_PIN $(grep "ADC_RSSI_PIN" $config | awk '{print          $3}')" ${hFile}
@@ -612,10 +766,12 @@ echo '// notice - DMA conversion were programmatically generated and may be inco
 echo '' >> ${hFile}
 
 ## dshot
+echo "building DMAR"
 translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_ON" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
 #translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_AUTO" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
 
 ## esc serial timer
+echo "building ESC"
 if [[ $(grep ESCSERIAL $config) ]] ; then
     echo '#define USE_ESCSERIAL' >> ${hFile}
     translate "ESCSERIAL_PIN" $config "#define ESCSERIAL_TIMER_TX_PIN $(grep "ESCSERIAL_PIN" $config | awk '{print          $3}')" ${hFile}
@@ -623,9 +779,12 @@ fi
 echo ''  >> ${hFile}
 
 # pinio
+echo "building PINIO"
 if [[ $(grep 'PINIO[0-9]_' $config >> ${hFile}) ]] ; then
     echo '' >> $hFile
 fi
+
+echo "building misc/inverted"
 
 # inverted sdcard
 grep SDCARD_DETECT_INVERTED $config >> ${hFile}
@@ -637,6 +796,7 @@ echo '// notice - this file was programmatically generated and may not have acco
 echo ''  >> ${hFile}
 
 # port masks
+echo "building port masks"
 if [[ $(grep ' PA[0-9]' $config) ]]; then
     echo '#define TARGET_IO_PORTA 0xffff' >> ${hFile}
 fi
@@ -664,12 +824,14 @@ fi
 echo '// notice - masks were programmatically generated - must verify last port group for 0xffff or (BIT(2))'  >> ${hFile}
 echo '' >> ${hFile}
 
+echo "building static default FEATURES - please modify as fit"
 echo '#define DEFAULT_FEATURES       (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_AIRMODE | FEATURE_RX_SERIAL)' >> ${hFile}
 echo '#define DEFAULT_RX_FEATURE     FEATURE_RX_SERIAL' >> ${hFile}
 echo '// notice - incomplete; may need additional DEFAULT_FEATURES; e.g. FEATURE_SOFTSERIAL | FEATURE_RX_SPI' >> ${hFile}
 echo '' >> ${hFile}
 
 # used timers
+echo "building USED_TIMERS"
 usedTimers=''
 for i in {1..20}
 do
@@ -685,7 +847,6 @@ echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep -c 'TIMER_PIN_MAP(' ${config} )"
 echo "#define USED_TIMERS (${usedTimers})" >> ${hFile}
 echo '// notice - USED_TIMERS were programmatically generated from unified-target and may be incomplete.' >> ${hFile}
 echo '' >> ${hFile}
-echo 'Please modify USED_TIMERS in .h file'
 
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${hFile}
 
