@@ -673,6 +673,43 @@ fi
 echo '// notice - this file was programmatically generated and may need GYRO_2 manually added.' >> ${hFile}
 echo '' >> ${hFile}
 
+## vcp, uarts, softserial
+echo "building UART(RX/TX), VCP, and serial-count"
+vcpserial=1
+hardserial=$(grep "UART[[:digit:]]\+_TX_PIN" $config | wc -l)
+softserial=$(grep "SOFTSERIAL[[:digit:]]_TX_PIN" $config | wc -l )
+totalserial=$(expr $hardserial + $softserial)
+for ((i=1; i<=${totalserial}; i++))
+do
+    echo "#define USE_UART${i}" >> ${hFile}
+done
+grep "UART[[:digit:]]\+_TX_PIN" $config >> ${hFile}
+grep "UART[[:digit:]]\+_RX_PIN" $config >> ${hFile}
+grep "SOFTSERIAL[[:digit:]]_TX_PIN" $config >> ${hFile}
+grep "SOFTSERIAL[[:digit:]]_RX_PIN" $config >> ${hFile}
+for ((i=1; i<=${softserial}; i++))
+do
+    echo "#define USE_SOFTSERIAL{$i}" >> ${hFile}
+done
+grep 'RX_PPM_PIN' $config >> ${hFile}
+grep "INVERTER_PIN_UART" $config >> ${hFile}
+grep "USART" $config >> ${hFile}
+echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)"  >> ${hFile}
+echo '// notice - UART/USART were programmatically generated - please verify UART/USART.' >> ${hFile}
+echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
+echo '// notice - may need "#define DEFAULT_RX_FEATURE, SERIALRX_PROVIDER' >> ${hFile}
+echo '// notice - please verify serial count.' >> ${hFile}
+echo '' >> ${hFile}
+
+# RX SPI & inverted RX SPI LED
+grep "RX_SPI_EXTI_PIN" $config >> ${hFile}
+if [[ $(grep RX_SPI_LED_INVERTED $config) ]] ; then
+    echo '#define RX_CC2500_SPI_LED_PIN_INVERTED' >> $hFile
+    echo '#define RX_FRSKY_SPI_LED_PIN_INVERTED' >> $hFile
+    echo '// notice - this needs to be verified' >> $hFile
+    echo '' >> $hFile
+fi
+
 # i2c/baro/mag/etc
 echo "building I2C (BARO, MAG, etc)"
 grep -w MAG_ALIGN $config >> ${hFile}
@@ -716,43 +753,6 @@ echo "building MAX7456"
 grep MAX7456_SPI_CS_PIN $config >> ${hFile}
 grep MAX7456_SPI_INSTANCE $config >> ${hFile}
 echo '' >> ${hFile}
-
-## vcp, uarts, softserial
-echo "building UART(RX/TX), VCP, and serial-count"
-vcpserial=1
-hardserial=$(grep "UART[[:digit:]]\+_TX_PIN" $config | wc -l)
-softserial=$(grep "SOFTSERIAL[[:digit:]]_TX_PIN" $config | wc -l )
-totalserial=$(expr $hardserial + $softserial)
-for ((i=1; i<=${totalserial}; i++))
-do
-    echo "#define USE_UART${i}" >> ${hFile}
-done
-grep "UART[[:digit:]]\+_TX_PIN" $config >> ${hFile}
-grep "UART[[:digit:]]\+_RX_PIN" $config >> ${hFile}
-grep "SOFTSERIAL[[:digit:]]_TX_PIN" $config >> ${hFile}
-grep "SOFTSERIAL[[:digit:]]_RX_PIN" $config >> ${hFile}
-for ((i=1; i<=${softserial}; i++))
-do
-    echo "#define USE_SOFTSERIAL{$i}" >> ${hFile}
-done
-grep 'RX_PPM_PIN' $config >> ${hFile}
-grep "INVERTER_PIN_UART" $config >> ${hFile}
-grep "USART" $config >> ${hFile}
-echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)"  >> ${hFile}
-echo '// notice - UART/USART were programmatically generated - please verify UART/USART.' >> ${hFile}
-echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
-echo '// notice - may need "#define DEFAULT_RX_FEATURE, SERIALRX_PROVIDER' >> ${hFile}
-echo '// notice - please verify serial count.' >> ${hFile}
-echo '' >> ${hFile}
-
-# RX SPI & inverted RX SPI LED
-grep "RX_SPI_EXTI_PIN" $config >> ${hFile}
-if [[ $(grep RX_SPI_LED_INVERTED $config) ]] ; then
-    echo '#define RX_CC2500_SPI_LED_PIN_INVERTED' >> $hFile
-    echo '#define RX_FRSKY_SPI_LED_PIN_INVERTED' >> $hFile
-    echo '// notice - this needs to be verified' >> $hFile
-    echo '' >> $hFile
-fi
 
 ## adc, default voltage/current, scale
 echo "building ADC"
