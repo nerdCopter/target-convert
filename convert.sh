@@ -307,6 +307,7 @@ echo '#include "drivers/timer_def.h"' >> ${cFile}
 echo ''  >> ${cFile}
 
 # DEF_TIM
+echo 'building DEF_TIM'
 pinArray=($(grep "TIM[0-9]* CH" $unified | awk -F' ' '{print $3}' | sed s/://)) #col 3 contains colon to be stripped
 timerArray=($(grep "TIM[0-9]* CH" $unified | awk -F' ' '{print $4}'))
 channelArray=($(grep "TIM[0-9]* CH" $unified | awk -F' ' '{print $5}'))
@@ -315,17 +316,21 @@ timerCount=${#timerArray[@]}
 channelCount=${#channelArray[@]}
 # debug to screen
 #echo "pinCount: $pinCount"
-#echo "timerCount: $timerCount"
+echo "timerCount: $timerCount"
 #echo "channelCount: $channelCount"
 
 #tranlate pin syntax
 for (( i = 0; i <= $pinCount-1; i++ ))
 do
     # specialized 0-trim
-    covertedPinArray[$i]="P$(echo ${pinArray[$i]} | sed -E 's/^([A-Z])0?([0-9]+)/\1\2/')"
+    convertedPinArray[$i]="P$(echo ${pinArray[$i]} | sed -E 's/^([A-Z])0?([0-9]+)/\1\2/')"
     # debug to screen
-    #echo "pin: ${pinArray[$i]} (${covertedPinArray[$i]}) timer: ${timerArray[$i]} channel: ${channelArray[$i]}"
+    #echo "pin: ${pinArray[$i]} (${convertedPinArray[$i]}) timer: ${timerArray[$i]} channel: ${channelArray[$i]}"
 done
+convertedPinArray=("${convertedPinArray[@]}")
+convertedPinCount=${#channelArray[@]}
+# debug to screen
+#echo "convertedPinCountCount: $convertedPinCount"
 
 # debug to screen
 # grep 'dma pin ' $unified
@@ -335,7 +340,7 @@ motorsPINArray=($(grep "resource MOTOR " $unified | awk -F' ' '{print $4}'))
 motorsCount=${#motorsArray[@]}
 motorsPINCount=${#motorsPINArray[@]}
 # debug to screen
-#echo "motorsCount: $motorsCount"
+echo "motorsCount: $motorsCount"
 #echo "motorsPINCount: $motorsPINCount"
 
 # EmuF TIM_USE_ options:
@@ -353,14 +358,14 @@ motorsPINCount=${#motorsPINArray[@]}
 echo 'const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {' >> ${cFile}
 for (( i = 1; i <= $motorsCount; i++ ))
 do
-    echo "building DEF_TIM for motor $i : ${motorsPINArray[$i-1]} (${covertedPinArray[$i]})"
+    echo "building DEF_TIM for motor $i : ${motorsPINArray[$i-1]}"
     timer=""
     channel=""
     dma=""
-    for (( j = 0; j <= $pinCount; j++ )) ; do
+    for (( j = 0; j <= $pinCount-1; j++ )) ; do
         # match motor pin/timer/chan/dma
         # debug to screen
-        #echo "motor $i ${motorsPINArray[$i-1]} (${covertedPinArray[$i]})" #motors[0] is motorNumber1
+        #echo "motor $i ${motorsPINArray[$i-1]} (${convertedPinArray[$j]})" #motors[0] is motorNumber1
         #echo "${motorsPINArray[$i-1]} == ${pinArray[$j]} ?? >> ${timerArray[$j]} & ${channelArray[$j]}"
         if [[ "${motorsPINArray[$i-1]}" == "${pinArray[$j]}" ]] ; then
             # debug to screen
@@ -371,35 +376,37 @@ do
             break # stop at motor ${j}
         fi
     done;
-    echo "DEF_TIM(${timer}, ${channel}, ${covertedPinArray[$i]}, TIM_USE_MOTOR, 0, ${dma}) // motor ${i}" >> ${cFile}
+    echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$j]}, TIM_USE_MOTOR, 0, ${dma}) // motor ${i}" >> ${cFile}
     # debug to screen
-    #echo "DEF_TIM(${timer}, ${channel}, ${covertedPinArray[$i]}, TIM_USE_MOTOR, 0, ${dma}) // motor ${i}"
+    #echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$j]}, TIM_USE_MOTOR, 0, ${dma}) // motor ${i}"
 
     # remove pin $j (motor $i) we dont need it anymore (syntax: unset 'array[x]')
     unset 'pinArray[j]' 
     unset 'timerArray[j]'
     unset 'channelArray[j]'
-    unset 'covertedPinArray[j]'
+    unset 'convertedPinArray[j]'
 done
 
 #compact arrays after unsets / very important
 pinArray=("${pinArray[@]}")
 timerArray=("${timerArray[@]}")
 channelArray=("${channelArray[@]}")
-covertedPinArray=("${covertedPinArray[@]}")
+convertedPinArray=("${convertedPinArray[@]}")
 #new array sizes
 pinCount=${#pinArray[@]}
 timerCount=${#timerArray[@]}
 channelCount=${#channelArray[@]}
+convertedPinCount=${#channelArray[@]}
 # debug to screen
-#echo "pinCount: $pinCount"
-#echo "timerCount: $timerCount"
-#echo "channelCount: $channelCount"
+#echo "remaining pinCount: $pinCount"
+echo "remaining timerCount: $timerCount"
+#echo "remaining channelCount: $channelCount"
+#echo "remaining convertedPinCountCount: $convertedPinCount"
 
 # build remaining non-motor timers
 for (( i = 0; i <= $pinCount-1; i++ ))
 do
-    echo "building DEF_TIM for pin ${pinArray[$i]} (${covertedPinArray[$i]})"
+    echo "building DEF_TIM for pin ${pinArray[$i]} (${convertedPinArray[$i]})"
     timer="${timerArray[$i]}"
     channel="${channelArray[$i]}"
     dma=$(grep "dma pin ${pinArray[$i]}" $unified | awk -F' ' '{print $4}')
@@ -423,9 +430,9 @@ do
         timUse="TIM_USE_ANY"
         comment="could not determine TIM_USE_xxxxx - please check"
     fi
-    echo "DEF_TIM(${timer}, ${channel}, ${covertedPinArray[$i]}, ${timUse}, 0, ${dma}) // ${comment}" >> ${cFile}
+    echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$i]}, ${timUse}, 0, ${dma}) // ${comment}" >> ${cFile}
     # debug to screen
-    #echo "DEF_TIM(${timer}, ${channel}, ${covertedPinArray[$i]}, ${timUse}, 0, ${dma}) // ${comment}"
+    #echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$i]}, ${timUse}, 0, ${dma}) // ${comment}"
 done
 echo '};' >> ${cFile}
 echo '' >> ${cFile}
@@ -436,7 +443,6 @@ echo '//          some timers may associate with multiple pins. e.g baro/flash' 
 
 echo '' >> ${cFile}
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${cFile}
-echo '// recommend converting timers from unified-target; however, unified-targets will be sunsetted.' >> ${cFile}
 echo '' >> ${cFile}
 
 # timers.txt file for quick reference
@@ -733,10 +739,10 @@ grep 'RX_PPM_PIN' $config >> ${hFile}
 grep "INVERTER_PIN_UART" $config >> ${hFile}
 grep "USART" $config >> ${hFile}
 echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)"  >> ${hFile}
-echo '// notice - UART/USART were programmatically generated - should verify UART/USART.' >> ${hFile}
+echo '// notice - UART/USART were programmatically generated - please verify UART/USART.' >> ${hFile}
 echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
 echo '// notice - may need "#define DEFAULT_RX_FEATURE, SERIALRX_PROVIDER' >> ${hFile}
-echo '// notice - should verify serial count.' >> ${hFile}
+echo '// notice - please verify serial count.' >> ${hFile}
 echo '' >> ${hFile}
 
 # RX SPI & inverted RX SPI LED
@@ -821,13 +827,13 @@ fi
 if [[ $(grep ' PH[0-9]' $config) ]]; then
     echo '#define TARGET_IO_PORTH 0xffff' >> ${hFile}
 fi
-echo '// notice - masks were programmatically generated - must verify last port group for 0xffff or (BIT(2))'  >> ${hFile}
+echo '// notice - masks were programmatically generated - please verify last port group for 0xffff or (BIT(2))'  >> ${hFile}
 echo '' >> ${hFile}
 
 echo "building static default FEATURES - please modify as fit"
 echo '#define DEFAULT_FEATURES       (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_AIRMODE | FEATURE_RX_SERIAL)' >> ${hFile}
 echo '#define DEFAULT_RX_FEATURE     FEATURE_RX_SERIAL' >> ${hFile}
-echo '// notice - incomplete; may need additional DEFAULT_FEATURES; e.g. FEATURE_SOFTSERIAL | FEATURE_RX_SPI' >> ${hFile}
+echo '// notice - potentially incomplete; may need additional DEFAULT_FEATURES; e.g. FEATURE_SOFTSERIAL | FEATURE_RX_SPI' >> ${hFile}
 echo '' >> ${hFile}
 
 # used timers
@@ -853,7 +859,10 @@ echo '// notice - this file was programmatically generated and may be incomplete
 echo 'cleaning files'
 sed '/"TODO"/d' -i ${hFile}
 
+echo ''
 echo 'Task finished. No guarantees; Definitions are likely incomplete.'
 echo 'Please search the resultant files for the keyword "notice" to rectify any needs.'
+echo 'Please cleanup target files before Pull-Requesting.'
+echo ''
 echo "Folder: ${dest}"
 ls -lh "${dest}"
