@@ -482,10 +482,12 @@ translate MANUFACTURER_ID $config "#define TARGET_BOARD_IDENTIFIER \"$(grep MANU
 translate BOARD_NAME $config "#define USBD_PRODUCT_STRING \"$(grep BOARD_NAME $config | awk '{print $3}')\"" ${hFile}
 echo '' >> ${hFile}
 
-# all the USE_ includes acc, gyro, flash, max, etc
+# all the USE_ definitions - includes acc, gyro, flash, max, etc
 echo "building USE_"
+echo " - reference ./info/USE_.txt"
 grep USE_ $config >> ${hFile}
 echo '' >> ${hFile}
+
 echo '#define USE_VCP'  >> ${hFile}
 if [[ $(grep USE_FLASH $config) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
@@ -497,7 +499,6 @@ fi
 if [[ $(grep USE_MAX7456 $config) ]] ; then
     echo '#define USE_OSD' >> ${hFile}
 fi
-
 echo '' >> ${hFile}
 
 # led
@@ -765,7 +766,9 @@ else
 fi
 
 # i2c/baro/mag/etc
-echo "building I2C (BARO, MAG, etc)"
+echo 'building I2C (BARO, MAG, etc)'
+echo ' - not all baro are supported by EmuFlight'
+echo ' - BARO/MAG likely incomplete - please inspect and rectify.'
 grep -w MAG_ALIGN $config >> ${hFile}
 grep MAG_I2C_INSTANCE $config >> ${hFile}
 if [[ $(grep I2C $config) ]] ; then
