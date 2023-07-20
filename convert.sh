@@ -376,9 +376,9 @@ do
             break # stop at motor ${j}
         fi
     done;
-    echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$j]}, TIM_USE_MOTOR, 0, ${dma}) // motor ${i}" >> ${cFile}
+    echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$j]}, TIM_USE_MOTOR, 0, ${dma}), // motor ${i}" >> ${cFile}
     # debug to screen
-    #echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$j]}, TIM_USE_MOTOR, 0, ${dma}) // motor ${i}"
+    #echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$j]}, TIM_USE_MOTOR, 0, ${dma}), // motor ${i}"
 
     # remove pin $j (motor $i) we dont need it anymore (syntax: unset 'array[x]')
     unset 'pinArray[j]' 
@@ -430,9 +430,9 @@ do
         timUse="TIM_USE_ANY"
         comment="could not determine TIM_USE_xxxxx - please check"
     fi
-    echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$i]}, ${timUse}, 0, ${dma}) // ${comment}" >> ${cFile}
+    echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$i]}, ${timUse}, 0, ${dma}), // ${comment}" >> ${cFile}
     # debug to screen
-    #echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$i]}, ${timUse}, 0, ${dma}) // ${comment}"
+    #echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$i]}, ${timUse}, 0, ${dma}), // ${comment}"
 done
 echo '};' >> ${cFile}
 echo '' >> ${cFile}
