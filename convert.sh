@@ -701,13 +701,67 @@ echo '// notice - may need "#define DEFAULT_RX_FEATURE, SERIALRX_PROVIDER' >> ${
 echo '// notice - please verify serial count.' >> ${hFile}
 echo '' >> ${hFile}
 
-# RX SPI & inverted RX SPI LED
-grep "RX_SPI_EXTI_PIN" $config >> ${hFile}
-if [[ $(grep RX_SPI_LED_INVERTED $config) ]] ; then
-    echo '#define RX_CC2500_SPI_LED_PIN_INVERTED' >> $hFile
-    echo '#define RX_FRSKY_SPI_LED_PIN_INVERTED' >> $hFile
-    echo '// notice - this needs to be verified' >> $hFile
-    echo '' >> $hFile
+# BF config.h:
+# USE_RX_SPI
+# RX_SPI_BIND
+# RX_SPI_BIND_PIN
+# RX_SPI_CC2500_ANT_SEL_PIN
+# RX_SPI_CC2500_LNA_EN_PIN
+# RX_SPI_CC2500_TX_EN_PIN
+# RX_SPI_CS
+# RX_SPI_CS_PIN
+# RX_SPI_DEFAULT_PROTOCOL
+# RX_SPI_EXPRESSLRS_BUSY_PIN
+# RX_SPI_EXPRESSLRS_RESET_PIN
+# RX_SPI_EXTI
+# RX_SPI_EXTI_PIN
+# RX_SPI_INSTANCE
+# RX_SPI_LED
+# RX_SPI_LED_INVERTED
+# RX_SPI_LED_PIN
+# RX_SPI_PROTOCOL
+#
+# to EmuF:
+# USE_RX_SPI
+# USE_RX_FLYSKY
+# USE_RX_FLYSKY_SPI_LED
+# USE_RX_FRSKY_SPI
+# USE_RX_FRSKY_SPI_D
+# USE_RX_FRSKY_SPI_TELEMETRY
+# USE_RX_FRSKY_SPI_X
+# BINDPLUG_PIN
+# DMA_SPI_RX_DMA_CHANNEL
+# DMA_SPI_RX_DMA_FLAG_ALL
+# DMA_SPI_RX_DMA_FLAG_GL
+# DMA_SPI_RX_DMA_FLAG_TC
+# DMA_SPI_RX_DMA_HANDLER
+# DMA_SPI_RX_DMA_IRQn
+# DMA_SPI_RX_DMA_STREAM
+# RX_CC2500_SPI_ANT_SEL_PIN
+# RX_CC2500_SPI_GDO_0_PIN
+# RX_CC2500_SPI_LED_PIN
+# RX_CC2500_SPI_LNA_EN_PIN
+# RX_CC2500_SPI_TX_EN_PIN
+# RX_FLYSKY_SPI_LED_PIN
+# RX_FRSKY_SPI_LED_PIN_INVERTED
+# RX_NSS_PIN
+# RX_SPI_DEFAULT_PROTOCOL
+# RX_SPI_INSTANCE
+# RX_SPI_LED_PIN
+# SPI1_NSS_PIN
+# SPI2_NSS_PIN
+# SPI3_NSS_PIN
+# SPI4_NSS_PIN
+# SPI5_NSS_PIN
+# SPI_RX_CS_PIN
+
+# RX SPI vs SERIAL
+if [[ $(grep 'RX_SPI_' $config) ]] ; then
+    featureRX='FEATURE_RX_SPI'
+    echo 'skipping SPI based RX. please define all RX_SPI_ manually; too complex for automation; ELRS not supported by EmuFlight.'
+    echo '// notice - please manually add all SPI based receiver definitions. complexity for these is currently beyond scope of automation.' >> ${hFile}
+else
+    featureRX='FEATURE_RX_SERIAL'
 fi
 
 # i2c/baro/mag/etc
@@ -831,8 +885,8 @@ echo '// notice - masks were programmatically generated - please verify last por
 echo '' >> ${hFile}
 
 echo "building static default FEATURES - please modify as fit"
-echo '#define DEFAULT_FEATURES       (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_AIRMODE | FEATURE_RX_SERIAL)' >> ${hFile}
-echo '#define DEFAULT_RX_FEATURE     FEATURE_RX_SERIAL' >> ${hFile}
+echo "#define DEFAULT_FEATURES       (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_AIRMODE | ${featureRX})" >> ${hFile}
+echo "#define DEFAULT_RX_FEATURE     ${featureRX}" >> ${hFile}
 echo '// notice - potentially incomplete; may need additional DEFAULT_FEATURES; e.g. FEATURE_SOFTSERIAL | FEATURE_RX_SPI' >> ${hFile}
 echo '' >> ${hFile}
 
