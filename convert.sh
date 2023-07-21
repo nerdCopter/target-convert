@@ -208,7 +208,7 @@ echo 'TARGET_SRC = \' >> ${mkFile}
 # drivers/accgyro_legacy/accgyro_lsm303dlhc.c \
 
 echo 'adding drivers'
-translate MPU ${config} 'drivers/accgyro/accgyro_mpu.c \' ${mkFile}
+echo 'drivers/accgyro/accgyro_mpu.c \' >> ${mkFile} # needed irregardless
 
 translate USE_GYRO_SPI_MPU6000 ${config} 'drivers/accgyro/accgyro_spi_mpu6000.c \' ${mkFile}
 translate USE_GYRO_SPI_MPU6500 ${config} 'drivers/accgyro/accgyro_mpu6500.c \' ${mkFile}
@@ -373,6 +373,11 @@ do
             timer="${timerArray[$j]}"
             channel="${channelArray[$j]}"
             dma=$(grep "dma pin ${motorsPINArray[$i-1]}" $unified | awk -F' ' '{print $4}')
+            if [ -z "$dma" ] ; then
+                echo ' - error: no associated dma value found. assuming 0. please repair if necessary.'
+                comment+='; dma 0 assumed, please verify'
+                dma="0"
+            fi
             break # stop at motor ${j}
         fi
     done;
@@ -429,6 +434,11 @@ do
     else
         timUse="TIM_USE_ANY"
         comment="could not determine TIM_USE_xxxxx - please check"
+    fi
+    if [ -z "$dma" ] ; then
+        echo ' - error: no associated dma value found. assuming 0. please repair if necessary.'
+        comment+='; dma 0 assumed, please verify'
+        dma="0"
     fi
     echo "DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$i]}, ${timUse}, 0, ${dma}), // ${comment}" >> ${cFile}
     # debug to screen
@@ -831,7 +841,6 @@ do
         # debug to screen
         #echo "$adcDmaString"
         #echo "#define ADC${i}_DMA_STREAM DMA${dma}_Stream${stream} //${adcDmaString}"
-
     fi
 
 done
