@@ -554,7 +554,7 @@ fi
 echo "#define ACC_1_ALIGN          ${G1_align}" >> ${hFile}
 grep GYRO_1_CS_PIN $config >> ${hFile}
 G1_csPin=$(grep -w GYRO_1_CS_PIN $config | awk -F' ' '{print $3}')
-grep GYRO_1_EXTI_PIN $config >> ${hFile} && echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN'  >> ${hFile}
+grep GYRO_1_EXTI_PIN $config >> ${hFile}
 G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $config | awk -F' ' '{print $3}')
 grep GYRO_1_SPI_INSTANCE $config >> ${hFile}
 G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}')
@@ -563,6 +563,7 @@ if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
     echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
     # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
 fi
+echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN'  >> ${hFile}
 echo '' >> ${hFile}
 
 # dual gyro
@@ -818,9 +819,23 @@ translate "ADC_CURR_PIN" $config "#define CURRENT_METER_ADC_PIN $(grep "ADC_CURR
 translate "ADC_RSSI_PIN" $config "#define RSSI_ADC_PIN $(grep "ADC_RSSI_PIN" $config | awk '{print          $3}')" ${hFile}
 for i in {1..4}
 do
-    translate "ADC${i}_DMA_OPT" $config "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - DMA2_Stream0 likely wrong - found in unified-target." ${hFile}
-    translate "ADC ${i}: DMA" $unified "// $(grep "ADC ${i}: DMA" $unified) // notice - use this for above define." ${hFile}
+    #old commented out
+    #translate "ADC${i}_DMA_OPT" $config "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - DMA2_Stream0 likely wrong - found in unified-target." ${hFile}
+    #translate "ADC ${i}: DMA" $unified "// $(grep "ADC ${i}: DMA" $unified) // notice - use this for above define." ${hFile}
+    # format: # ADC 1: DMA2 Stream 0 Channel 0
+    adcDmaString=$(grep "ADC ${i}: DMA" $unified)
+    if [ ! -z "$adcDmaString" ] ; then
+        dma=$(echo "$adcDmaString" | awk -F'DMA' '{print $2}' | awk -F' ' '{print $1}')
+        stream=$(echo "$adcDmaString" | awk -F'Stream' '{print $2}' | awk -F' ' '{print $1}')
+        echo "#define ADC${i}_DMA_STREAM DMA${dma}_Stream${stream} //${adcDmaString}" >> ${hFile}
+        # debug to screen
+        #echo "$adcDmaString"
+        #echo "#define ADC${i}_DMA_STREAM DMA${dma}_Stream${stream} //${adcDmaString}"
+
+    fi
+
 done
+echo ' - please verify ADC DMA Streams.'
 grep "DEFAULT_VOLTAGE_METER_SOURCE" $config >> ${hFile}
 grep "DEFAULT_CURRENT_METER_SOURCE" $config >> ${hFile}
 grep DEFAULT_CURRENT_METER_SCALE $config >> ${hFile}
@@ -887,7 +902,8 @@ fi
 echo '// notice - masks were programmatically generated - please verify last port group for 0xffff or (BIT(2))'  >> ${hFile}
 echo '' >> ${hFile}
 
-echo "building static default FEATURES - please modify as fit"
+echo "building static default FEATURES"
+echo " - please modify as fit."
 echo "#define DEFAULT_FEATURES       (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_AIRMODE | ${featureRX})" >> ${hFile}
 echo "#define DEFAULT_RX_FEATURE     ${featureRX}" >> ${hFile}
 echo '// notice - potentially incomplete; may need additional DEFAULT_FEATURES; e.g. FEATURE_SOFTSERIAL | FEATURE_RX_SPI' >> ${hFile}
