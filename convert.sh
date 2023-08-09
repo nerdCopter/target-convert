@@ -579,11 +579,13 @@ echo '' >> ${hFile}
 # dual gyro
 if [[ $(grep -w GYRO_2_ALIGN $config) ]] ; then
     grep -w GYRO_2_ALIGN $config >> ${hFile}  # -w avoid _ALIGN_YAW
-elif [[ $(grep "GYRO_2_" $config) ]] ; then
+    G2_align=$(grep -w GYRO_2_ALIGN $config | awk -F' ' '{print $3}')
+else
     echo '#define GYRO_2_ALIGN         CW0_DEG' >> ${hFile}
+    G2_align='CW0_DEG'
 fi
 if [[ $(grep "GYRO_2_" $config) ]] ; then
-    echo '#define ACC_2_ALIGN      GYRO_2_ALIGN' >> ${hFile}
+    echo "#define ACC_2_ALIGN          ${G2_align}" >> ${hFile}
 fi
 grep GYRO_2_CS_PIN $config >> ${hFile}
 grep GYRO_2_EXTI_PIN $config >> ${hFile}
