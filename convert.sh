@@ -155,9 +155,9 @@ elif [[ $(grep STM32F411 $config) ]]; then
 elif [[ $(grep STM32F446 $config) ]]; then
     echo 'F446_TARGETS   += $(TARGET)' > ${mkFile}
 elif [[ $(grep STM32F7X2 $config) ]]; then
-    echo 'F7X5XG_TARGETS += $(TARGET)' > ${mkFile}
-elif [[ $(grep STM32F745 $config) ]]; then
     echo 'F7X2RE_TARGETS += $(TARGET)' > ${mkFile}
+elif [[ $(grep STM32F745 $config) ]]; then
+    echo 'F7X5XG_TARGETS += $(TARGET)' > ${mkFile}
 else
   echo 'not an F4 nor an F7. exiting.'
   exit
