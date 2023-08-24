@@ -501,10 +501,10 @@ echo '' >> ${hFile}
 echo '#define USE_VCP'  >> ${hFile}
 if [[ $(grep USE_FLASH $config) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
-    echo '#define USE_FLASH_M25P16  //testing' >> ${hFile}
-    echo '#define USE_FLASH_W25M    //testing' >> ${hFile}
-    echo '#define USE_FLASH_W25M512 //testing' >> ${hFile}
-    echo '#define USE_FLASH_W25Q    //testing' >> ${hFile}
+    echo '#define USE_FLASH_M25P16  // 16MB Micron M25P16 and others (https://github.com/betaflight/betaflight/blob/master/src/main/drivers/flash_m25p16.c#L68)' >> ${hFile}
+    echo '//#define USE_FLASH_W25M    // 1Gb NAND flash support' >> ${hFile}
+    echo '//#define USE_FLASH_W25M512 // 16, 32, 64 or 128MB Winbond stacked die support' >> ${hFile}
+    echo '//#define USE_FLASH_W25Q    // 512Kb (256Kb x 2 stacked) NOR flash support' >> ${hFile}
 fi
 if [[ $(grep USE_MAX7456 $config) ]] ; then
     echo '#define USE_OSD' >> ${hFile}
@@ -573,7 +573,7 @@ if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
     echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
     # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
 fi
-echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN'  >> ${hFile}
+echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN at this time'  >> ${hFile}
 echo '' >> ${hFile}
 
 # dual gyro
@@ -602,7 +602,7 @@ fi
 if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $config) ]] ; then
     echo '#define USE_EXTI' >> $hFile
     echo '//#define USE_GYRO_EXTI' >> $hFile
-    echo '// notice - USE_GYRO_EXTI validity unknown at this time' >> $hFile
+    echo '// notice - USE_GYRO_EXTI validity for BMI270 unknown at this time' >> $hFile
     echo '' >> ${hFile}
 fi
 
