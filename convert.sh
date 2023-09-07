@@ -164,7 +164,13 @@ else
 fi
 
 # enable flash and drivers
-echo 'FEATURES       += VCP ONBOARDFLASH' >> ${mkFile}
+FEATURES='FEATURES       += VCP '
+if [[ $(grep SDCARD $config) ]]; then
+    FEATURES+='SDCARD'
+else
+    FEATURES+='ONBOARDFLASH'
+fi
+echo "${FEATURES}" >> ${mkFile}
 echo '' >> ${mkFile}
 echo 'TARGET_SRC = \' >> ${mkFile}
 
@@ -495,7 +501,7 @@ echo '' >> ${hFile}
 # all the USE_ definitions - includes acc, gyro, flash, max, etc
 echo "building USE_"
 echo " - reference ./info/USE_.txt"
-grep USE_ $config >> ${hFile}
+grep "define USE_" $config >> ${hFile}
 echo '' >> ${hFile}
 
 echo '#define USE_VCP'  >> ${hFile}
@@ -577,10 +583,13 @@ echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; 
 echo '' >> ${hFile}
 
 # dual gyro
+if [[ $(grep "GYRO_2_" $config) ]] ; then
+    translate "DEFAULT_GYRO_TO_USE"  $config "#define GYRO_CONFIG_USE_GYRO_DEFAULT $(grep "DEFAULT_GYRO_TO_USE" $config | awk '{print $3}')" ${hFile}
+fi
 if [[ $(grep -w GYRO_2_ALIGN $config) ]] ; then
     grep -w GYRO_2_ALIGN $config >> ${hFile}  # -w avoid _ALIGN_YAW
     G2_align=$(grep -w GYRO_2_ALIGN $config | awk -F' ' '{print $3}')
-else
+elif [[ $(grep  GYRO_2 $config) ]] ; then
     echo '#define GYRO_2_ALIGN         CW0_DEG' >> ${hFile}
     G2_align='CW0_DEG'
 fi
@@ -711,8 +720,8 @@ grep "USART" $config >> ${hFile}
 echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)"  >> ${hFile}
 echo '// notice - UART/USART were programmatically generated - please verify UART/USART.' >> ${hFile}
 echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
-echo '// notice - may need "#define DEFAULT_RX_FEATURE, SERIALRX_PROVIDER' >> ${hFile}
-echo '// notice - please verify serial count.' >> ${hFile}
+echo '// notice - for any iterim non-defined TX/RX _PIN, may need to define as NONE and also include any USE_UARTx involved.' >> ${hFile}
+echo '// notice - please verify serial count. UARTs defined as NONE may need to be included.' >> ${hFile}
 echo '' >> ${hFile}
 
 # BF config.h:
@@ -813,6 +822,22 @@ echo "building FLASH"
 grep FLASH_CS_PIN $config >> ${hFile}
 grep FLASH_SPI_INSTANCE $config >> ${hFile}
 translate "BLACKBOX_DEVICE_FLASH" $config '#define ENABLE_BLACKBOX_LOGGING_ON_SPIFLASH_BY_DEFAULT' ${hFile}
+echo '' >> ${hFile}
+
+## sdcard
+if [[ $(grep USE_SDCARD $config) ]] ; then
+    echo "#define USE_SDCARD_SDIO" >> ${hFile}
+fi
+grep SDCARD_SPI_CS_PIN $config >> ${hFile}
+grep SDCARD_SPI_INSTANCE $config >> ${hFile}
+echo "//notice - NEED: #define SDCARD_DMA_CHANNEL          X" >> ${hFile}
+echo "//notice - NEED: #define SDCARD_DMA_CHANNEL_TX       DMAx_StreamX" >> ${hFile}
+echo "//notice - other sdcard defines maybe needed (rare?): SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX_FULL" >> ${hFile}
+translate "BLACKBOX_DEVICE_SDCARD" $config "#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT" ${hFile}
+if [[ $(grep USE_SDCARD $config) ]] ; then
+    echo "#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4    //notice - needs validation. these are hardware dependent. known options: 2, 4, 8." >> ${hFile}
+    echo "#define SDCARD_SPI_INITIALIZATION_CLOCK_DIVIDER 256  //notice - needs validation. these are hardware dependent. known options: 128, 256" >> ${hFile}
+fi
 echo '' >> ${hFile}
 
 ## gps -- skipping
@@ -918,6 +943,7 @@ echo " - please modify as fit."
 echo "#define DEFAULT_FEATURES       (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_AIRMODE | ${featureRX})" >> ${hFile}
 echo "#define DEFAULT_RX_FEATURE     ${featureRX}" >> ${hFile}
 echo '// notice - potentially incomplete; may need additional DEFAULT_FEATURES; e.g. FEATURE_SOFTSERIAL | FEATURE_RX_SPI' >> ${hFile}
+echo '// notice - may need "#define DEFAULT_RX_FEATURE, SERIALRX_PROVIDER' >> ${hFile}
 echo '' >> ${hFile}
 
 # used timers
