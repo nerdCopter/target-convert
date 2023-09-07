@@ -14,3 +14,8 @@
 * `./convert.sh DIAT-MAMBAF405_2022B ./temp`
 * `./convert.sh TURC-TUNERCF405 ./`
 * `./convert.sh SPBE-SPEEDYBEE_F745_AIO ../EmuFlight/src/main/target/`
+
+#### Output
+* Target-folder containing `target.mk`, `target.c`, `target.h`.
+* A sub-folder containing downloaded resources.
+* When building targets or making pull-request, do not include the resultant `resources` sub-folder folder.

@@ -81,17 +81,19 @@ manufacturer=$(echo ${1} | awk -F'-' '{print $1}')
 board=$(echo ${1} | awk -F'-' '{print $2}')
 fc="${manufacturer}_${board}"
 dest="${2}/${fc}"
+resources="${dest}/resources"
 
 echo "creating ${fc}"
 mkdir ${dest} 2> /dev/null
+mkdir ${resources} 2> /dev/null
 
 echo "downloading..."
-wget -c -N -nv -P ${dest} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h" || { echo "download failed" ; rm -r ${dest} ; exit 1 ; }
-wget -c -N -nv -P ${dest} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config" || { echo "download failed" ; rm -r ${dest} ; exit 1 ; }
+wget -c -N -nv -P ${resources} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h" || { echo "download failed" ; rm -r ${dest} ; exit 1 ; }
+wget -c -N -nv -P ${resources} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config" || { echo "download failed" ; rm -r ${dest} ; exit 1 ; }
 
 #config="${1}"
-config="${dest}/config.h"
-unified="${dest}/${1}.config"
+config="${resources}/config.h"
+unified="${resources}/${1}.config"
 
 echo "config.h: ${config}"
 echo "unified: ${unified}"
@@ -99,7 +101,7 @@ echo "unified: ${unified}"
 mkFile="${dest}/target.mk"
 cFile="${dest}/target.c"
 hFile="${dest}/target.h"
-tFile="${dest}/timers.txt"
+tFile="${resources}/timers.txt"
 
 function translate () {
     local search="$1"
