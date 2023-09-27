@@ -578,7 +578,7 @@ grep GYRO_1_SPI_INSTANCE $config >> ${hFile}
 G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}')
 
 if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
-    echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
+    echo "#define MPU_INT_EXTI         ${G1_extiPin} // notice - MPU_INT_EXTI and GYRO_1_EXTI_PIN are interchangeable 0. see src/main/sensors/gyro.c:684" >> $hFile
     # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
 fi
 echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN at this time'  >> ${hFile}
@@ -611,7 +611,7 @@ fi
 
 # exti
 if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $config) ]] ; then
-    echo '#define USE_EXTI' >> $hFile
+    echo '#define USE_EXTI // notice - REQUIRED when USE_GYRO_EXTI' >> $hFile
     echo '//#define USE_GYRO_EXTI' >> $hFile
     echo '// notice - USE_GYRO_EXTI validity for BMI270 unknown at this time' >> $hFile
     echo '' >> ${hFile}

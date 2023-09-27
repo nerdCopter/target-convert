@@ -7,7 +7,7 @@
 
 #### Make the script executable 
 * `cd target-convert`
-* `chmod +x ./convert`
+* `chmod +x ./convert.sh`
 
 #### Example Usage:
 * parameters are [unified-target-name] in format `VEND-TARGETNAME` and [destination-folder] in POSIX path format.
