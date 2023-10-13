@@ -88,8 +88,8 @@ mkdir ${dest} 2> /dev/null
 mkdir ${resources} 2> /dev/null
 
 echo "downloading..."
-wget -c -N -nv -P ${resources} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h" || { echo "download failed" ; rm -r ${dest} ; exit 1 ; }
-wget -c -N -nv -P ${resources} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config" || { echo "download failed" ; rm -r ${dest} ; exit 1 ; }
+wget -c -N -nv -P ${resources} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h" || { echo "download failed. aborting." ; rm -rf ${dest} ; exit 1 ; }
+wget -c -N -nv -P ${resources} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config" || { echo "download failed. aborting." ; rm -r ${dest} ; exit 1 ; }
 
 #config="${1}"
 config="${resources}/config.h"
@@ -161,7 +161,9 @@ elif [[ $(grep STM32F7X2 $config) ]]; then
 elif [[ $(grep STM32F745 $config) ]]; then
     echo 'F7X5XG_TARGETS += $(TARGET)' > ${mkFile}
 else
-  echo 'not an F4 nor an F7. exiting.'
+  echo ' - not an F4 nor an F7.'
+  rm -r ${dest}
+  echo ' - aborting.'
   exit
 fi
 
@@ -174,6 +176,7 @@ else
 fi
 echo "${FEATURES}" >> ${mkFile}
 echo '' >> ${mkFile}
+
 echo 'TARGET_SRC = \' >> ${mkFile}
 
 # gyros
@@ -216,8 +219,7 @@ echo 'TARGET_SRC = \' >> ${mkFile}
 # drivers/accgyro_legacy/accgyro_lsm303dlhc.c \
 
 echo 'adding drivers'
-echo 'drivers/accgyro/accgyro_mpu.c \' >> ${mkFile} # needed irregardless
-
+echo 'drivers/accgyro/accgyro_mpu.c \' >> ${mkFile} # needed irregardless (???)
 translate USE_GYRO_SPI_MPU6000 ${config} 'drivers/accgyro/accgyro_spi_mpu6000.c \' ${mkFile}
 translate USE_GYRO_SPI_MPU6500 ${config} 'drivers/accgyro/accgyro_mpu6500.c \' ${mkFile}
 translate USE_GYRO_SPI_MPU6500 ${config} 'drivers/accgyro/accgyro_spi_mpu6500.c \' ${mkFile}
@@ -272,14 +274,16 @@ translate USE_BARO_MS5611 ${config} 'drivers/barometer/barometer_ms5611.c \' ${m
 translate USE_BARO_QMP6988 ${config} 'drivers/barometer/barometer_qmp6988.c \' ${mkFile}
 # skipping non-supported
 
-# skipping compass
-echo 'skipping any compass; please manually modify target.mk if necessary.'
 # emuflight src/main/target
 # drivers/compass/compass_ak8963.c \
-# drivers/compass/compass_ak8975.c \
+# drivers/compass/compass_ak8975.c \ # not used, afaict.
 # drivers/compass/compass_hmc5883l.c \
 # drivers/compass/compass_lis3mdl.c \
 # drivers/compass/compass_qmc5883l.c \
+translate USE_MAG_SPI_AK8963 ${config} 'drivers/compass/compass_ak8963.c \' ${mkFile}
+translate USE_MAG_HMC5883 ${config} 'drivers/compass/compass_hmc5883l.c \' ${mkFile}
+translate USE_MAG_QMC5883 ${config} 'drivers/compass/compass_qmc5883l.c \' ${mkFile}
+translate USE_MAG_LIS3MDL ${config} 'drivers/compass/compass_lis3mdl.c \' ${mkFile}
 
 # skipping vtx 6705
 echo 'skipping any VTX RTC6705; please manually modify target.mk if necessary.'
@@ -504,6 +508,9 @@ echo '' >> ${hFile}
 echo "building USE_"
 echo " - reference ./info/USE_.txt"
 grep "define USE_" $config >> ${hFile}
+if [[ $(grep USE_BARO $config) ]] ; then
+    echo '#define USE_BARO'  >> ${hFile}
+fi
 echo '' >> ${hFile}
 
 echo '#define USE_VCP'  >> ${hFile}
@@ -566,8 +573,8 @@ if [[ $(grep -w GYRO_1_ALIGN $config) ]] ; then
     grep -w GYRO_1_ALIGN $config >> ${hFile}  # -w avoid _ALIGN_YAW
     G1_align=$(grep -w GYRO_1_ALIGN $config | awk -F' ' '{print $3}')
 else
-    echo '#define GYRO_1_ALIGN         CW0_DEG' >> ${hFile}
-    G1_align='CW0_DEG'
+    G1_align='CW0_DEG' # default
+    echo "#define GYRO_1_ALIGN         ${G1_align}" >> ${hFile}
 fi
 echo "#define ACC_1_ALIGN          ${G1_align}" >> ${hFile}
 grep GYRO_1_CS_PIN $config >> ${hFile}
@@ -592,8 +599,8 @@ if [[ $(grep -w GYRO_2_ALIGN $config) ]] ; then
     grep -w GYRO_2_ALIGN $config >> ${hFile}  # -w avoid _ALIGN_YAW
     G2_align=$(grep -w GYRO_2_ALIGN $config | awk -F' ' '{print $3}')
 elif [[ $(grep  GYRO_2 $config) ]] ; then
-    echo '#define GYRO_2_ALIGN         CW0_DEG' >> ${hFile}
-    G2_align='CW0_DEG'
+    G2_align='CW0_DEG' # default
+    echo "#define GYRO_2_ALIGN         ${G2_align}" >> ${hFile}
 fi
 if [[ $(grep "GYRO_2_" $config) ]] ; then
     echo "#define ACC_2_ALIGN          ${G2_align}" >> ${hFile}
@@ -621,6 +628,20 @@ fi
 if [[ $(grep SPI_MPU $config) ]] ; then
     echo '#define USE_MPU_DATA_READY_SIGNAL' >> ${hFile}
     grep ENSURE_MPU_DATA_READY_IS_LOW $config >> ${hFile}
+    echo '' >> ${hFile}
+fi
+
+#MPU9250
+#define USE_GYRO_SPI_MPU9250
+#define USE_ACC_SPI_MPU9250
+if [[ $(grep SPI_MPU9250 $config) ]] ; then
+    # convert gyro1 > mpu -- this may need changing later
+    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
+        echo "#define ACC_MPU9250_ALIGN         ${G1_align}" >> $hFile
+        echo "#define GYRO_MPU9250_ALIGN        ${G1_align}" >> $hFile
+        echo "#define MPU9250_CS_PIN            ${G1_csPin}" >> $hFile
+        echo "#define MPU9250_SPI_INSTANCE      ${G1_spi}"   >> $hFile
+    fi
     echo '' >> ${hFile}
 fi
 
@@ -793,8 +814,71 @@ fi
 echo 'building I2C (BARO, MAG, etc)'
 echo ' - not all baro are supported by EmuFlight'
 echo ' - BARO/MAG likely incomplete - please inspect and rectify.'
-grep -w MAG_ALIGN $config >> ${hFile}
-grep MAG_I2C_INSTANCE $config >> ${hFile}
+
+# BARO
+
+# EmuF
+#define DEFAULT_BARO_BMP280
+#define DEFAULT_BARO_QMP6988
+#define DEFAULT_BARO_SPI_BMP280
+#define DEFAULT_BARO_SPI_LPS
+
+# BF
+#define DEFAULT_BARO_DEVICE BARO_BMP280
+#define DEFAULT_BARO_DEVICE BARO_NONE
+
+#in BF config.h
+#define DEFAULT_BARO_DEVICE _____
+#define DEFAULT_BARO_I2C_ADDRESS xxx
+
+#BARO_CS_PIN
+#BARO_I2C_INSTANCE #would be duplicated by grep I2CDEV_${i}
+grep BARO_CS_PIN $config >> ${hFile}
+grep BARO_SPI_INSTANCE $config >> ${hFile}
+
+# MAG
+
+#USE_MAG_SPI_AK8963
+#USE_MAG_AK8975
+#USE_MAG_HMC5883
+#USE_MAG_QMC5883
+#USE_MAG_LIS3MDL
+
+#MAG_HMC5883_ALIGN
+#MAG_QMC5883L_ALIGN
+#MAG_AK8975_ALIGN
+#MAG_AK8963_ALIGN
+
+#HMC5883_SPI_INSTANCE
+#HMC5883_CS_PIN
+#AK8963_SPI_INSTANCE
+#AK8963_CS_PIN
+
+if [[ $(grep -w MAG_ALIGN $config) ]] ; then
+    MAG_align=$(grep -w MAG_ALIGN $config | awk -F' ' '{print $3}')
+elif [[ $(grep USE_MAG $config) ]] ; then
+    MAG_align='CW0_DEG' # default
+fi
+#if [[ $(grep USE_MAG $config) ]] ; then
+#    echo "#define MAG_ALIGN          ${MAG_align} //technically this will go unused" >> ${hFile}
+#fi
+if [[ $(grep USE_MAG_SPI_AK8963 $config) ]] ; then
+    echo '#define USE_SPI_MAG'  >> ${hFile}
+    translate "MAG_CS_PIN" $config "#define AK8963_CS_PIN $(grep -w MAG_CS_PIN $config | awk -F' ' '{print $3}')" ${hFile}
+    translate "MAG_SPI_INSTANCE" $config "#define AK8963_SPI_INSTANCE $(grep -w MAG_SPI_INSTANCE $config | awk -F' ' '{print $3}')" ${hFile}
+    echo "#define MAG_AK8963_ALIGN   ${MAG_align}" >> ${hFile}
+fi
+if [[ $(grep USE_MAG_HMC5883 $config) ]] ; then
+    grep USE_MAG_HMC5883 $config >> ${hFile}
+    echo "#define MAG_HMC5883_ALIGN  ${MAG_align}"  >> ${hFile}
+fi
+if [[ $(grep USE_MAG_QMC5883 $config) ]] ; then
+    grep USE_MAG_QMC5883 $config >> ${hFile}
+    echo "#define MAG_QMC5883L_ALIGN ${MAG_align}"  >> ${hFile}
+fi
+
+#I2C
+#grep MAG_I2C_INSTANCE $config >> ${hFile} # purge as it will be duplicated by grep I2CDEV_${i}
 if [[ $(grep I2C $config) ]] ; then
     echo '#define USE_I2C' >> ${hFile}
 fi
@@ -807,7 +891,7 @@ do
         echo "#define USE_I2C_DEVICE_${i}"  >> ${hFile}
         echo "#define I2C_DEVICE        (I2CDEV_${i})"  >> ${hFile}
     fi
-    grep I2CDEV_${i} $config >> ${hFile}
+    grep I2CDEV_${i} $config >> ${hFile} # duplicates MAG_I2C_INSTANCE
     if [[ $(grep "USE_I2C${i}_PULLUP ON" $config) ]] ; then
         echo "#define I2C${i}_PULLUP true" >> $hFile
     fi
@@ -815,7 +899,7 @@ do
     translate "I2C${i}_SCL_PIN" $config "#define I2C${i}_SCL $(grep "I2C${i}_SCL_PIN" $config | awk '{print          $3}')" ${hFile}
     translate "I2C${i}_SDA_PIN" $config "#define I2C${i}_SDA $(grep "I2C${i}_SDA_PIN" $config | awk '{print          $3}')" ${hFile}
 done
-echo '// notice - this file was programmatically generated and likely needs MAG/BARO manually added and/or verified.' >> ${hFile}
+echo '// notice - this file was programmatically generated and likely needs MAG/BARO manually added, finished, or verified.' >> ${hFile}
 echo '//           e.g. USE_BARO_xxxxxx, USE_BARO_SPI_xxxxxx, DEFAULT_BARO_SPI_xxxxxx, xxxxxx_CS_PIN, xxxxxx_SPI_INSTANCE' >> ${hFile}
 echo '' >> ${hFile}
 
