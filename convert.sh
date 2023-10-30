@@ -150,21 +150,41 @@ echo "building ${mkFile}"
 # 1024K_TARGETS = $(F405_TARGETS) $(F7X5XG_TARGETS) $(F7X6XG_TARGETS)
 # 2048K_TARGETS = $(F7X5XI_TARGETS)
 
+# BF 4.5 generic TARGET_BOARD_IDENTIFIER ##
+# AT32F435G #define TARGET_BOARD_IDENTIFIER "A435"
+# AT32F435M #define TARGET_BOARD_IDENTIFIER "A435"
+# STM32F405 #define TARGET_BOARD_IDENTIFIER "S405"
+# STM32F411 #define TARGET_BOARD_IDENTIFIER "S411"
+# STM32F446 #define TARGET_BOARD_IDENTIFIER "S446"
+# STM32F745 #define TARGET_BOARD_IDENTIFIER "S745"
+# STM32F7X2 #define TARGET_BOARD_IDENTIFIER "S7X2"
+# STM32G47X #define TARGET_BOARD_IDENTIFIER "SG47"
+# STM32H723 #define TARGET_BOARD_IDENTIFIER "SH72"
+# STM32H725 #define TARGET_BOARD_IDENTIFIER "SH72"
+# STM32H730 #define TARGET_BOARD_IDENTIFIER "S730"
+# STM32H743 #define TARGET_BOARD_IDENTIFIER "SH74"
+# STM32H750 #define TARGET_BOARD_IDENTIFIER "S750"
+
 if [[ $(grep STM32F405 $config) ]]; then
     echo 'F405_TARGETS   += $(TARGET)' > ${mkFile}
+    TBID="S405"
 elif [[ $(grep STM32F411 $config) ]]; then
     echo 'F411_TARGETS   += $(TARGET)' > ${mkFile}
+    TBID="S411"
 elif [[ $(grep STM32F446 $config) ]]; then
     echo 'F446_TARGETS   += $(TARGET)' > ${mkFile}
+    TBID="S446"
 elif [[ $(grep STM32F7X2 $config) ]]; then
     echo 'F7X2RE_TARGETS += $(TARGET)' > ${mkFile}
+    TBID="S7X2"
 elif [[ $(grep STM32F745 $config) ]]; then
     echo 'F7X5XG_TARGETS += $(TARGET)' > ${mkFile}
+    TBID="S745"
 else
-  echo ' - not an F4 nor an F7.'
-  rm -r ${dest}
-  echo ' - aborting.'
-  exit
+    echo ' - not an F4 nor an F7.'
+    rm -r ${dest}
+    echo ' - aborting.'
+    exit
 fi
 
 # enable flash and drivers
@@ -500,7 +520,8 @@ echo "${license}" > ${hFile}
 echo '#pragma once' >> ${hFile}
 echo '' >> ${hFile}
 
-translate MANUFACTURER_ID $config "#define TARGET_BOARD_IDENTIFIER \"$(grep MANUFACTURER_ID $config | awk '{print $3}')\"" ${hFile}
+translate MANUFACTURER_ID $config "#define TARGET_BOARD_IDENTIFIER \"${TBID}\"" ${hFile} #seemingly deprecated in BF 4.5, resorting to unified equivalent
+translate MANUFACTURER_ID $config "#define TARGET_MANUFACTURER_IDENTIFIER \"$(grep MANUFACTURER_ID $config | awk '{print $3}')\"" ${hFile} #this is technically proper
 translate BOARD_NAME $config "#define USBD_PRODUCT_STRING \"$(grep BOARD_NAME $config | awk '{print $3}')\"" ${hFile}
 echo '' >> ${hFile}
 
