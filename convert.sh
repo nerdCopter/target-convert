@@ -520,9 +520,12 @@ echo "${license}" > ${hFile}
 echo '#pragma once' >> ${hFile}
 echo '' >> ${hFile}
 
-translate MANUFACTURER_ID $config "#define TARGET_BOARD_IDENTIFIER \"${TBID}\"" ${hFile} #seemingly deprecated in BF 4.5, resorting to unified equivalent
+
 translate MANUFACTURER_ID $config "#define TARGET_MANUFACTURER_IDENTIFIER \"$(grep MANUFACTURER_ID $config | awk '{print $3}')\"" ${hFile} #this is technically proper
 translate BOARD_NAME $config "#define USBD_PRODUCT_STRING \"$(grep BOARD_NAME $config | awk '{print $3}')\"" ${hFile}
+echo '' >> ${hFile}
+grep "define FC_TARGET_MCU" $config | sed 's/$/     \/\/ not used in EmuF/' >> ${hFile} # not used in EmuF
+translate MANUFACTURER_ID $config "#define TARGET_BOARD_IDENTIFIER \"${TBID}\"  // generic ID" ${hFile} #seemingly deprecated in BF 4.5, resorting to unified equivalent
 echo '' >> ${hFile}
 
 # all the USE_ definitions - includes acc, gyro, flash, max, etc
@@ -537,7 +540,7 @@ echo '' >> ${hFile}
 echo '#define USE_VCP'  >> ${hFile}
 if [[ $(grep USE_FLASH $config) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
-    echo '#define USE_FLASH_M25P16  // 16MB Micron M25P16 and others (https://github.com/betaflight/betaflight/blob/master/src/main/drivers/flash_m25p16.c#L68)' >> ${hFile}
+    echo '#define USE_FLASH_M25P16    // 16MB Micron M25P16 and others (ref: https://github.com/betaflight/betaflight/blob/master/src/main/drivers/flash_m25p16.c)' >> ${hFile}
     echo '//#define USE_FLASH_W25M    // 1Gb NAND flash support' >> ${hFile}
     echo '//#define USE_FLASH_W25M512 // 16, 32, 64 or 128MB Winbond stacked die support' >> ${hFile}
     echo '//#define USE_FLASH_W25Q    // 512Kb (256Kb x 2 stacked) NOR flash support' >> ${hFile}
@@ -606,10 +609,10 @@ grep GYRO_1_SPI_INSTANCE $config >> ${hFile}
 G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}')
 
 if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
-    echo "#define MPU_INT_EXTI         ${G1_extiPin} // notice - MPU_INT_EXTI and GYRO_1_EXTI_PIN are interchangeable 0. see src/main/sensors/gyro.c:684" >> $hFile
+    echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
     # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
 fi
-echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN at this time'  >> ${hFile}
+echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN at this time. (ref: https://github.com/emuflight/EmuFlight/blob/master/src/main/sensors/gyro.c)'  >> ${hFile}
 echo '' >> ${hFile}
 
 # dual gyro
