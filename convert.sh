@@ -46,6 +46,10 @@ if [[ ! $( which wget ) ]] ; then
     echo 'please install: wget'
     exit 1
 fi
+if [[ ! $( which git ) ]] ; then
+    echo 'please install: git'
+    exit 1
+fi
 
 license='/*
  * This file is part of EmuFlight. It is derived from Betaflight.
@@ -73,10 +77,15 @@ license='/*
 #           https://github.com/betaflight/config/raw/master/configs/MAMBAF722_2022B/config.h
 #           https://github.com/betaflight/unified-targets/raw/master/configs/default/DIAT-MAMBAF722_2022B.config
 
-# old
-# manufacturer="$(grep MANUFACTURER_ID $config | awk -F' ' '{print $3}')"
-# board="$(grep BOARD_NAME $config | awk -F' ' '{print $3}')"
-# new
+echo ""
+
+generatedMessage="This resource file generated using https://github.com/nerdCopter/target-convert"
+generatedSHA="Commit: $(git rev-parse --short HEAD) $(git diff --shortstat)"
+
+echo "${generatedMessage}"
+echo "${generatedSHA}"
+echo ""
+
 manufacturer=$(echo ${1} | awk -F'-' '{print $1}')
 board=$(echo ${1} | awk -F'-' '{print $2}')
 fc="${manufacturer}_${board}"
@@ -91,7 +100,6 @@ echo "downloading..."
 wget -c -N -nv -P ${resources} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h" || { echo "download failed. aborting." ; rm -rf ${dest} ; exit 1 ; }
 wget -c -N -nv -P ${resources} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config" || { echo "download failed. aborting." ; rm -r ${dest} ; exit 1 ; }
 
-#config="${1}"
 config="${resources}/config.h"
 unified="${resources}/${1}.config"
 
@@ -324,11 +332,18 @@ echo 'drivers/max7456.c \' >> ${mkFile}
 echo '' >> ${mkFile}
 echo '# notice - this file was programmatically generated and may be incomplete.' >> ${mkFile}
 echo '# eg: flash, compass, barometer, vtx6705, ledstrip, pinio, etc.   especially mag/baro' >> ${mkFile}
+echo '' >> ${mkFile}
+echo "# ${generatedMessage}" >> ${mkFile}
+echo "# ${generatedSHA}" >> ${mkFile}
+echo "" >> ${mkFile}
 
 # create target.c file
 echo "building ${cFile}"
 
 echo "${license}" > ${cFile}
+echo "// ${generatedMessage}" >> ${cFile}
+echo "// ${generatedSHA}" >> ${cFile}
+echo '' >> ${cFile}
 
 echo '#include <stdint.h>' >> ${cFile}
 echo '#include "platform.h"' >> ${cFile}
@@ -336,7 +351,7 @@ echo '#include "drivers/io.h"' >> ${cFile}
 echo '#include "drivers/dma.h"' >> ${cFile}
 echo '#include "drivers/timer.h"' >> ${cFile}
 echo '#include "drivers/timer_def.h"' >> ${cFile}
-echo ''  >> ${cFile}
+echo '' >> ${cFile}
 
 # DEF_TIM
 echo 'building DEF_TIM'
@@ -485,7 +500,6 @@ echo '//          some timers may associate with multiple pins. e.g baro/flash' 
 
 echo '' >> ${cFile}
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${cFile}
-echo '' >> ${cFile}
 
 # timers.txt file for quick reference
 echo '// timers for target.c' > ${tFile}
@@ -506,17 +520,21 @@ echo '// config.h timers' >> ${tFile}
 grep "MOTOR[[:digit:]]\+_PIN" $config | xargs -d'\n' --replace echo "{}" >> ${tFile}
 echo '' >> ${tFile}
 grep TIMER_PIN_MAP $config | xargs -d'\n' --replace echo "{}" >> ${tFile}
-echo ''  >> ${tFile}
+echo '' >> ${tFile}
 echo '// unified timers' >> ${tFile}
 echo '# timer' >> ${tFile}
 grep -A1 'timer ' $unified | xargs -d'\n' --replace echo "{}" >> ${tFile}
-echo ''  >> ${tFile}
+echo '' >> ${tFile}
 grep -A1 'dma pin ' $unified | xargs -d'\n' --replace echo "{}" >> ${tFile}
 
 # create target.h file
 echo "building ${hFile}"
 
 echo "${license}" > ${hFile}
+echo "// ${generatedMessage}" >> ${hFile}
+echo "// ${generatedSHA}" >> ${hFile}
+echo '' >> ${hFile}
+
 echo '#pragma once' >> ${hFile}
 echo '' >> ${hFile}
 
@@ -533,11 +551,11 @@ echo "building USE_"
 echo " - reference ./info/USE_.txt"
 grep "define USE_" $config >> ${hFile}
 if [[ $(grep USE_BARO $config) ]] ; then
-    echo '#define USE_BARO'  >> ${hFile}
+    echo '#define USE_BARO' >> ${hFile}
 fi
 echo '' >> ${hFile}
 
-echo '#define USE_VCP'  >> ${hFile}
+echo '#define USE_VCP' >> ${hFile}
 if [[ $(grep USE_FLASH $config) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
     echo '#define USE_FLASH_M25P16    // 16MB Micron M25P16 and others (ref: https://github.com/betaflight/betaflight/blob/master/src/main/drivers/flash_m25p16.c)' >> ${hFile}
@@ -583,7 +601,7 @@ fi
 for i in {1..6}
 do
     if [[ $(grep "SPI${i}_" $config) ]] ; then
-        echo "#define USE_SPI_DEVICE_${i}"  >> ${hFile}
+        echo "#define USE_SPI_DEVICE_${i}" >> ${hFile}
     fi
     grep SPI${i}_SCK_PIN $config >> ${hFile}
     translate SPI${i}_SDI_PIN $config "#define SPI${i}_MISO_PIN        $(grep SPI${i}_SDI_PIN $config | awk '{print $3}')" ${hFile}
@@ -612,7 +630,7 @@ if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
     echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
     # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
 fi
-echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN at this time. (ref: https://github.com/emuflight/EmuFlight/blob/master/src/main/sensors/gyro.c)'  >> ${hFile}
+echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN at this time. (ref: https://github.com/emuflight/EmuFlight/blob/master/src/main/sensors/gyro.c)' >> ${hFile}
 echo '' >> ${hFile}
 
 # dual gyro
@@ -664,7 +682,7 @@ if [[ $(grep SPI_MPU9250 $config) ]] ; then
         echo "#define ACC_MPU9250_ALIGN         ${G1_align}" >> $hFile
         echo "#define GYRO_MPU9250_ALIGN        ${G1_align}" >> $hFile
         echo "#define MPU9250_CS_PIN            ${G1_csPin}" >> $hFile
-        echo "#define MPU9250_SPI_INSTANCE      ${G1_spi}"   >> $hFile
+        echo "#define MPU9250_SPI_INSTANCE      ${G1_spi}"  >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -678,7 +696,7 @@ if [[ $(grep SPI_MPU6000 $config) ]] ; then
         echo "#define ACC_MPU6000_ALIGN         ${G1_align}" >> $hFile
         echo "#define GYRO_MPU6000_ALIGN        ${G1_align}" >> $hFile
         echo "#define MPU6000_CS_PIN            ${G1_csPin}" >> $hFile
-        echo "#define MPU6000_SPI_INSTANCE      ${G1_spi}"   >> $hFile
+        echo "#define MPU6000_SPI_INSTANCE      ${G1_spi}"  >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -692,7 +710,7 @@ if [[ $(grep SPI_MPU6500 $config) ]] ; then
         echo "#define ACC_MPU6500_ALIGN         ${G1_align}" >> $hFile
         echo "#define GYRO_MPU6500_ALIGN        ${G1_align}" >> $hFile
         echo "#define MPU6500_CS_PIN            ${G1_csPin}" >> $hFile
-        echo "#define MPU6500_SPI_INSTANCE      ${G1_spi}"   >> $hFile
+        echo "#define MPU6500_SPI_INSTANCE      ${G1_spi}"  >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -706,7 +724,7 @@ if [[ $(grep SPI_ICM20689 $config) ]] ; then
         echo "#define ACC_ICM20689_ALIGN         ${G1_align}" >> $hFile
         echo "#define GYRO_ICM20689_ALIGN        ${G1_align}" >> $hFile
         echo "#define ICM20689_CS_PIN            ${G1_csPin}" >> $hFile
-        echo "#define ICM20689_SPI_INSTANCE      ${G1_spi}"   >> $hFile
+        echo "#define ICM20689_SPI_INSTANCE      ${G1_spi}"  >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -720,7 +738,7 @@ if [[ $(grep SPI_ICM42688P $config) ]] ; then
         echo "#define ACC_ICM42688P_ALIGN      ${G1_align}" >> $hFile
         echo "#define GYRO_ICM42688P_ALIGN     ${G1_align}" >> $hFile
         echo "#define ICM42688P_CS_PIN         ${G1_csPin}" >> $hFile
-        echo "#define ICM42688P_SPI_INSTANCE   ${G1_spi}"   >> $hFile
+        echo "#define ICM42688P_SPI_INSTANCE   ${G1_spi}"  >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -735,7 +753,7 @@ if [[ $(grep ACCGYRO_BMI270 $config) ]] ; then
         echo "#define ACC_BMI270_ALIGN         ${G1_align}" >> $hFile
         echo "#define GYRO_BMI270_ALIGN        ${G1_align}" >> $hFile
         echo "#define BMI270_CS_PIN            ${G1_csPin}" >> $hFile
-        echo "#define BMI270_SPI_INSTANCE      ${G1_spi}"   >> $hFile
+        echo "#define BMI270_SPI_INSTANCE      ${G1_spi}"  >> $hFile
     fi
     echo '' >> ${hFile}
 fi
@@ -764,7 +782,7 @@ done
 grep 'RX_PPM_PIN' $config >> ${hFile}
 grep "INVERTER_PIN_UART" $config >> ${hFile}
 grep "USART" $config >> ${hFile}
-echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)"  >> ${hFile}
+echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)" >> ${hFile}
 echo '// notice - UART/USART were programmatically generated - please verify UART/USART.' >> ${hFile}
 echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
 echo '// notice - for any iterim non-defined TX/RX _PIN, may need to define as NONE and also include any USE_UARTx involved.' >> ${hFile}
@@ -887,18 +905,18 @@ fi
 #    echo "#define MAG_ALIGN          ${MAG_align} //technically this will go unused" >> ${hFile}
 #fi
 if [[ $(grep USE_MAG_SPI_AK8963 $config) ]] ; then
-    echo '#define USE_SPI_MAG'  >> ${hFile}
+    echo '#define USE_SPI_MAG' >> ${hFile}
     translate "MAG_CS_PIN" $config "#define AK8963_CS_PIN $(grep -w MAG_CS_PIN $config | awk -F' ' '{print $3}')" ${hFile}
     translate "MAG_SPI_INSTANCE" $config "#define AK8963_SPI_INSTANCE $(grep -w MAG_SPI_INSTANCE $config | awk -F' ' '{print $3}')" ${hFile}
     echo "#define MAG_AK8963_ALIGN   ${MAG_align}" >> ${hFile}
 fi
 if [[ $(grep USE_MAG_HMC5883 $config) ]] ; then
     grep USE_MAG_HMC5883 $config >> ${hFile}
-    echo "#define MAG_HMC5883_ALIGN  ${MAG_align}"  >> ${hFile}
+    echo "#define MAG_HMC5883_ALIGN  ${MAG_align}" >> ${hFile}
 fi
 if [[ $(grep USE_MAG_QMC5883 $config) ]] ; then
     grep USE_MAG_QMC5883 $config >> ${hFile}
-    echo "#define MAG_QMC5883L_ALIGN ${MAG_align}"  >> ${hFile}
+    echo "#define MAG_QMC5883L_ALIGN ${MAG_align}" >> ${hFile}
 fi
 
 #I2C
@@ -912,8 +930,8 @@ fi
 for i in {1..4}
 do
     if [[ $(grep "I2C${i}_" $config) ]] ; then
-        echo "#define USE_I2C_DEVICE_${i}"  >> ${hFile}
-        echo "#define I2C_DEVICE        (I2CDEV_${i})"  >> ${hFile}
+        echo "#define USE_I2C_DEVICE_${i}" >> ${hFile}
+        echo "#define I2C_DEVICE        (I2CDEV_${i})" >> ${hFile}
     fi
     grep I2CDEV_${i} $config >> ${hFile} # duplicates MAG_I2C_INSTANCE
     if [[ $(grep "USE_I2C${i}_PULLUP ON" $config) ]] ; then
@@ -986,7 +1004,7 @@ grep "DEFAULT_VOLTAGE_METER_SOURCE" $config >> ${hFile}
 grep "DEFAULT_CURRENT_METER_SOURCE" $config >> ${hFile}
 grep DEFAULT_CURRENT_METER_SCALE $config >> ${hFile}
 grep ADC_INSTANCE $config >> ${hFile}
-echo '// notice - DMA conversion were programmatically generated and may be incomplete.'  >> ${hFile}
+echo '// notice - DMA conversion were programmatically generated and may be incomplete.' >> ${hFile}
 echo '' >> ${hFile}
 
 ## dshot
@@ -1000,7 +1018,7 @@ if [[ $(grep ESCSERIAL $config) ]] ; then
     echo '#define USE_ESCSERIAL' >> ${hFile}
     translate "ESCSERIAL_PIN" $config "#define ESCSERIAL_TIMER_TX_PIN $(grep "ESCSERIAL_PIN" $config | awk '{print          $3}')" ${hFile}
 fi
-echo ''  >> ${hFile}
+echo '' >> ${hFile}
 
 # pinio
 echo "building PINIO"
@@ -1017,7 +1035,7 @@ grep SDCARD_DETECT_INVERTED $config >> ${hFile}
 grep "BUTTON_[AB]_PIN_INVERTED" $config >> ${hFile}
 
 echo '// notice - this file was programmatically generated and may not have accounted for any config instance of "#define TLM_INVERTED ON", etc.' >> ${hFile}
-echo ''  >> ${hFile}
+echo '' >> ${hFile}
 
 # port masks
 echo "building port masks"
@@ -1045,7 +1063,7 @@ fi
 if [[ $(grep ' PH[0-9]' $config) ]]; then
     echo '#define TARGET_IO_PORTH 0xffff' >> ${hFile}
 fi
-echo '// notice - masks were programmatically generated - please verify last port group for 0xffff or (BIT(2))'  >> ${hFile}
+echo '// notice - masks were programmatically generated - please verify last port group for 0xffff or (BIT(2))' >> ${hFile}
 echo '' >> ${hFile}
 
 echo "building static default FEATURES"
@@ -1075,6 +1093,7 @@ echo '// notice - USED_TIMERS were programmatically generated from unified-targe
 echo '' >> ${hFile}
 
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${hFile}
+echo '' >> ${hFile}
 
 echo 'cleaning files'
 sed '/"TODO"/d' -i ${hFile}
