@@ -329,6 +329,18 @@ translate PINIO ${config} 'drivers/pinio.c \' ${mkFile}
 # OSD is final driver
 echo 'drivers/max7456.c \' >> ${mkFile}
 
+# all the baro/mag drivers in case external baro/mag
+# echo 'drivers/barometer/barometer_bmp085.c \' >> ${mkFile}
+# echo 'drivers/barometer/barometer_bmp280.c \' >> ${mkFile}
+# echo 'drivers/barometer/barometer_lps.c \' >> ${mkFile}
+# echo 'drivers/barometer/barometer_ms5611.c \' >> ${mkFile}
+# echo 'drivers/barometer/barometer_qmp6988.c \' >> ${mkFile}
+# echo 'drivers/compass/compass_ak8963.c \' >> ${mkFile}
+# echo 'drivers/compass/compass_ak8975.c \' >> ${mkFile}
+# echo 'drivers/compass/compass_hmc5883l.c \' >> ${mkFile}
+# echo 'drivers/compass/compass_lis3mdl.c \' >> ${mkFile}
+# echo 'drivers/compass/compass_qmc5883l.c \' >> ${mkFile}
+
 echo '' >> ${mkFile}
 echo '# notice - this file was programmatically generated and may be incomplete.' >> ${mkFile}
 echo '# eg: flash, compass, barometer, vtx6705, ledstrip, pinio, etc.   especially mag/baro' >> ${mkFile}
@@ -1023,6 +1035,7 @@ echo '' >> ${hFile}
 # pinio
 echo "building PINIO"
 if [[ $(grep 'PINIO[0-9]_' $config >> ${hFile}) ]] ; then
+    echo '#define USE_PINIOBOX' >> $hFile
     echo '' >> $hFile
 fi
 
