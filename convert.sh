@@ -789,7 +789,7 @@ grep "SOFTSERIAL[[:digit:]]_TX_PIN" $config >> ${hFile}
 grep "SOFTSERIAL[[:digit:]]_RX_PIN" $config >> ${hFile}
 for ((i=1; i<=${softserial}; i++))
 do
-    echo "#define USE_SOFTSERIAL{$i}" >> ${hFile}
+    echo "#define USE_SOFTSERIAL${i}" >> ${hFile}
 done
 
 # RX_PPM_PIN not used in EmuF; (ref: https://github.com/emuflight/EmuFlight/blob/master/src/main/pg/rx_pwm.c)
