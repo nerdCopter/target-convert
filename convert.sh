@@ -673,8 +673,7 @@ fi
 # exti
 if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $config) ]] ; then
     echo '#define USE_EXTI // notice - REQUIRED when USE_GYRO_EXTI' >> $hFile
-    echo '//#define USE_GYRO_EXTI' >> $hFile
-    echo '// notice - USE_GYRO_EXTI validity for BMI270 unknown at this time' >> $hFile
+    echo '#define USE_GYRO_EXTI' >> $hFile
     echo '' >> ${hFile}
 fi
 
@@ -776,27 +775,32 @@ echo '' >> ${hFile}
 ## vcp, uarts, softserial
 echo "building UART(RX/TX), VCP, and serial-count"
 vcpserial=1
-hardserial=$(grep "UART[[:digit:]]\+_TX_PIN" $config | wc -l)
-softserial=$(grep "SOFTSERIAL[[:digit:]]_TX_PIN" $config | wc -l )
-totalserial=$(expr $hardserial + $softserial)
-for ((i=1; i<=${totalserial}; i++))
+
+hardserial=0
+for ((i=1; i<=10; i++)) #only seen 8 in EmuF, saw 10 in BF
 do
-    echo "#define USE_UART${i}" >> ${hFile}
-done
-grep "UART[[:digit:]]\+_TX_PIN" $config >> ${hFile}
-grep "UART[[:digit:]]\+_RX_PIN" $config >> ${hFile}
-grep "SOFTSERIAL[[:digit:]]_TX_PIN" $config >> ${hFile}
-grep "SOFTSERIAL[[:digit:]]_RX_PIN" $config >> ${hFile}
-for ((i=1; i<=${softserial}; i++))
-do
-    echo "#define USE_SOFTSERIAL${i}" >> ${hFile}
+    if [[ $(grep "UART${i}_[TR]X_PIN" $config) ]] ; then
+        echo "#define USE_UART${i}" >> ${hFile}
+        grep "UART${i}_[TR]X_PIN" $config >> ${hFile}
+        ((hardserial++))
+    fi
 done
 
+softserial=0
+for ((i=1; i<=2; i++)) # only seen 2 in both EmuF and BF
+do
+    if [[ $(grep "SOFTSERIAL${i}_[TR]X_PIN" $config) ]] ; then
+        echo "#define USE_SOFTSERIAL${i}" >> ${hFile}
+        grep "SOFTSERIAL${i}_[TR]X_PIN" $config >> ${hFile}
+        ((softserial++))
+    fi
+done
 # RX_PPM_PIN not used in EmuF; (ref: https://github.com/emuflight/EmuFlight/blob/master/src/main/pg/rx_pwm.c)
 #grep 'RX_PPM_PIN' $config | sed 's/^/\/\//' | sed 's/$/     \/\/ not used in EmuF/'
 
 grep "INVERTER_PIN_UART" $config >> ${hFile}
 grep "USART" $config >> ${hFile}
+totalserial=$(expr $hardserial + $softserial)
 echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)" >> ${hFile}
 echo '// notice - UART/USART were programmatically generated - please verify UART/USART.' >> ${hFile}
 echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
