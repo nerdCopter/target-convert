@@ -71,7 +71,7 @@ license='/*
  *
  * If not, see <http://www.gnu.org/licenses/>.
  */
- '
+'
 # examples: https://github.com/betaflight/config/raw/master/configs/TUNERCF405/config.h
 #           https://github.com/betaflight/unified-targets/raw/master/configs/default/TURC-TUNERCF405.config
 #           https://github.com/betaflight/config/raw/master/configs/MAMBAF722_2022B/config.h
@@ -972,8 +972,9 @@ if [[ $(grep USE_SDCARD $config) ]] ; then
     echo "#define USE_SDCARD_SDIO" >> ${hFile}
     grep SDCARD_SPI_CS_PIN $config >> ${hFile}
     grep SDCARD_SPI_INSTANCE $config >> ${hFile}
-    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL          X" >> ${hFile}
-    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL_TX       DMAx_StreamX" >> ${hFile}
+    spiMosi=$(grep '# SPI_MOSI' ${unified})
+    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL          X            //${spiMosi}" >> ${hFile}
+    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL_TX       DMAx_StreamX //${spiMosi}" >> ${hFile}
     echo "//notice - other sdcard defines maybe needed (rare?): SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX, SDCARD_DMA_CLK, SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG" >> ${hFile}
     translate "BLACKBOX_DEVICE_SDCARD" $config "#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT" ${hFile}
     echo "#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4    //notice - needs validation. these are hardware dependent. known options: 2, 4, 8." >> ${hFile}
