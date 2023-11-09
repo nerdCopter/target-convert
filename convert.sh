@@ -347,7 +347,6 @@ echo '# eg: flash, compass, barometer, vtx6705, ledstrip, pinio, etc.   especial
 echo '' >> ${mkFile}
 echo "# ${generatedMessage}" >> ${mkFile}
 echo "# ${generatedSHA}" >> ${mkFile}
-echo "" >> ${mkFile}
 
 # create target.c file
 echo "building ${cFile}"
@@ -623,6 +622,19 @@ echo '' >> ${hFile}
 
 # gyro defines
 echo "building GYRO"
+# exti
+if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $config) ]] ; then
+    echo '#define USE_EXTI // notice - REQUIRED when USE_GYRO_EXTI' >> $hFile
+    echo '#define USE_GYRO_EXTI' >> $hFile
+    echo '' >> ${hFile}
+fi
+# mpu
+if [[ $(grep SPI_MPU $config) ]] ; then
+    echo '#define USE_MPU_DATA_READY_SIGNAL' >> ${hFile}
+    grep ENSURE_MPU_DATA_READY_IS_LOW $config >> ${hFile}
+    echo '' >> ${hFile}
+fi
+
 if [[ $(grep -w GYRO_1_ALIGN $config) ]] ; then
     grep -w GYRO_1_ALIGN $config >> ${hFile}  # -w avoid _ALIGN_YAW
     G1_align=$(grep -w GYRO_1_ALIGN $config | awk -F' ' '{print $3}')
@@ -647,6 +659,10 @@ echo '' >> ${hFile}
 
 # dual gyro
 if [[ $(grep "GYRO_2_" $config) ]] ; then
+    echo '#define USE_DUAL_GYRO' >> ${hFile}
+    echo '' >> ${hFile}
+fi
+if [[ $(grep "GYRO_2_" $config) ]] ; then
     translate "DEFAULT_GYRO_TO_USE"  $config "#define GYRO_CONFIG_USE_GYRO_DEFAULT $(grep "DEFAULT_GYRO_TO_USE" $config | awk '{print $3}')" ${hFile}
 fi
 if [[ $(grep -w GYRO_2_ALIGN $config) ]] ; then
@@ -658,29 +674,9 @@ elif [[ $(grep  GYRO_2 $config) ]] ; then
 fi
 if [[ $(grep "GYRO_2_" $config) ]] ; then
     echo "#define ACC_2_ALIGN          ${G2_align}" >> ${hFile}
-fi
-grep GYRO_2_CS_PIN $config >> ${hFile}
-grep GYRO_2_EXTI_PIN $config >> ${hFile}
-grep GYRO_2_SPI_INSTANCE $config >> ${hFile}
-echo '' >> ${hFile}
-
-# dual gyro
-if [[ $(grep "GYRO_2_" $config) ]] ; then
-    echo '#define USE_DUAL_GYRO' >> ${hFile}
-    echo '' >> ${hFile}
-fi
-
-# exti
-if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $config) ]] ; then
-    echo '#define USE_EXTI // notice - REQUIRED when USE_GYRO_EXTI' >> $hFile
-    echo '#define USE_GYRO_EXTI' >> $hFile
-    echo '' >> ${hFile}
-fi
-
-# mpu
-if [[ $(grep SPI_MPU $config) ]] ; then
-    echo '#define USE_MPU_DATA_READY_SIGNAL' >> ${hFile}
-    grep ENSURE_MPU_DATA_READY_IS_LOW $config >> ${hFile}
+    grep GYRO_2_CS_PIN $config >> ${hFile}
+    grep GYRO_2_EXTI_PIN $config >> ${hFile}
+    grep GYRO_2_SPI_INSTANCE $config >> ${hFile}
     echo '' >> ${hFile}
 fi
 
@@ -974,18 +970,16 @@ echo '' >> ${hFile}
 ## sdcard
 if [[ $(grep USE_SDCARD $config) ]] ; then
     echo "#define USE_SDCARD_SDIO" >> ${hFile}
-fi
-grep SDCARD_SPI_CS_PIN $config >> ${hFile}
-grep SDCARD_SPI_INSTANCE $config >> ${hFile}
-echo "//notice - NEED: #define SDCARD_DMA_CHANNEL          X" >> ${hFile}
-echo "//notice - NEED: #define SDCARD_DMA_CHANNEL_TX       DMAx_StreamX" >> ${hFile}
-echo "//notice - other sdcard defines maybe needed (rare?): SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX_FULL" >> ${hFile}
-translate "BLACKBOX_DEVICE_SDCARD" $config "#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT" ${hFile}
-if [[ $(grep USE_SDCARD $config) ]] ; then
+    grep SDCARD_SPI_CS_PIN $config >> ${hFile}
+    grep SDCARD_SPI_INSTANCE $config >> ${hFile}
+    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL          X" >> ${hFile}
+    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL_TX       DMAx_StreamX" >> ${hFile}
+    echo "//notice - other sdcard defines maybe needed (rare?): SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX_FULL" >> ${hFile}
+    translate "BLACKBOX_DEVICE_SDCARD" $config "#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT" ${hFile}
     echo "#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4    //notice - needs validation. these are hardware dependent. known options: 2, 4, 8." >> ${hFile}
     echo "#define SDCARD_SPI_INITIALIZATION_CLOCK_DIVIDER 256  //notice - needs validation. these are hardware dependent. known options: 128, 256" >> ${hFile}
+    echo '' >> ${hFile}
 fi
-echo '' >> ${hFile}
 
 ## gps -- skipping
 echo "skipping GPS"
@@ -1113,7 +1107,6 @@ echo '// notice - USED_TIMERS were programmatically generated from unified-targe
 echo '' >> ${hFile}
 
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${hFile}
-echo '' >> ${hFile}
 
 echo 'cleaning files'
 sed '/"TODO"/d' -i ${hFile}
