@@ -974,7 +974,7 @@ if [[ $(grep USE_SDCARD $config) ]] ; then
     grep SDCARD_SPI_INSTANCE $config >> ${hFile}
     echo "//notice - NEED: #define SDCARD_DMA_CHANNEL          X" >> ${hFile}
     echo "//notice - NEED: #define SDCARD_DMA_CHANNEL_TX       DMAx_StreamX" >> ${hFile}
-    echo "//notice - other sdcard defines maybe needed (rare?): SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX_FULL" >> ${hFile}
+    echo "//notice - other sdcard defines maybe needed (rare?): SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX, SDCARD_DMA_CLK, SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG" >> ${hFile}
     translate "BLACKBOX_DEVICE_SDCARD" $config "#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT" ${hFile}
     echo "#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4    //notice - needs validation. these are hardware dependent. known options: 2, 4, 8." >> ${hFile}
     echo "#define SDCARD_SPI_INITIALIZATION_CLOCK_DIVIDER 256  //notice - needs validation. these are hardware dependent. known options: 128, 256" >> ${hFile}
