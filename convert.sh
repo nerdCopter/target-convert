@@ -536,6 +536,7 @@ echo '// unified timers' >> ${tFile}
 echo '# timer' >> ${tFile}
 grep -A1 'timer ' $unified | xargs -d'\n' --replace echo "{}" >> ${tFile}
 echo '' >> ${tFile}
+grep -A1 'dma ADC ' $unified | xargs -d'\n' --replace echo "{}" >> ${tFile}
 grep -A1 'dma pin ' $unified | xargs -d'\n' --replace echo "{}" >> ${tFile}
 
 # create target.h file
@@ -993,10 +994,14 @@ echo '' >> ${hFile}
 
 ## adc, default voltage/current, scale
 echo "building ADC"
+if [[ $(grep ADC $config) ]] ; then
+    echo '#define USE_ADC' >> ${hFile}
+fi
 translate "ADC_VBAT_PIN" $config "#define VBAT_ADC_PIN $(grep "ADC_VBAT_PIN" $config | awk '{print          $3}')" ${hFile}
 translate "ADC_CURR_PIN" $config "#define CURRENT_METER_ADC_PIN $(grep "ADC_CURR_PIN" $config | awk '{print          $3}')" ${hFile}
 translate "ADC_RSSI_PIN" $config "#define RSSI_ADC_PIN $(grep "ADC_RSSI_PIN" $config | awk '{print          $3}')" ${hFile}
-for i in {1..4}
+grep "ADC[[:digit:]]_DMA_OPT" $config >> ${hFile}
+for i in {1..5}
 do
     #old commented out
     #translate "ADC${i}_DMA_OPT" $config "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - DMA2_Stream0 likely wrong - found in unified-target." ${hFile}
