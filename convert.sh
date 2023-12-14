@@ -80,7 +80,11 @@ license='/*
 echo ""
 
 generatedMessage="This resource file generated using https://github.com/nerdCopter/target-convert"
-generatedSHA="Commit: $(git rev-parse --short HEAD) $(git diff --shortstat)"
+generatedSHA="Commit: $(git rev-parse --short HEAD)"
+generatedDiff="$(git diff --shortstat)"
+if [ -n "$generatedDiff" ]; then
+    generatedSHA+=" +$generatedDiff"
+fi
 
 echo "${generatedMessage}"
 echo "${generatedSHA}"
