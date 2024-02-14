@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # EmuFlight definition converter.
-# 2023 July - nerdCopter
-# Partially Converts betaflight config.h files to EmuFlight .mk .c .h files.
+# "Usable" since 2023 July.
+# Partially Converts Betaflight config.h files to EmuFlight .mk .c .h files.
 # Open to receiving more efficient and elegant code.
-# July 2023 revision requires Internet connection for autmated definitions download.
+# July 2023 and later revision requires Internet connection for automated definitions download.
 
 if ! [ $# -eq 2 ]  2>/dev/null; then
     echo "EmuFlight partial target converter script."
