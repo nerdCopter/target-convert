@@ -627,6 +627,10 @@ echo '' >> ${hFile}
 
 # gyro defines
 echo "building GYRO"
+if [[ $(grep GYRO_SPI $config) ]] ; then
+    echo '#define USE_SPI_GYRO' >> $hFile
+fi;
+
 # exti
 if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $config) ]] ; then
     echo '#define USE_EXTI // notice - REQUIRED when USE_GYRO_EXTI' >> $hFile
@@ -1120,6 +1124,7 @@ echo '// notice - this file was programmatically generated and may be incomplete
 
 echo 'cleaning files'
 sed '/"TODO"/d' -i ${hFile}
+awk -i inplace '!(NF && seen[$0]++)' ${hFile} # deduplicate, but skip empty lines
 
 echo ''
 echo 'Task finished. No guarantees; Definitions are likely incomplete.'
