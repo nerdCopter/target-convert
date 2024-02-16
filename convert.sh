@@ -967,6 +967,7 @@ do
 done
 echo '// notice - this file was programmatically generated and likely needs MAG/BARO manually added, finished, or verified.' >> ${hFile}
 echo '//           e.g. USE_BARO_xxxxxx, USE_BARO_SPI_xxxxxx, DEFAULT_BARO_SPI_xxxxxx, xxxxxx_CS_PIN, xxxxxx_SPI_INSTANCE' >> ${hFile}
+echo '//           e.g. BMP280_CS_PIN and BMP280_SPI_INSTANCE instead of BARO_CS_PIN and BARO_SPI_INSTANCE' >> ${hFile}
 echo '' >> ${hFile}
 
 ## flash
