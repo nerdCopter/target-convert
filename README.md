@@ -6,7 +6,7 @@
 * `sudo apt install grep gawk sed coreutils findutils wget git`
 
 #### Clone the repo
-* git clone https://github.com/nerdCopter/target-convert.git
+* `git clone https://github.com/nerdCopter/target-convert.git`
 
 #### Make the script executable
 * `cd target-convert`
