@@ -1,6 +1,6 @@
 # EmuFlight target conversion script
 
-* This BASH script is a Work-In-Progress.  It processes target definitions from [Betaflight/config](https://github.com/betaflight/config) and [Betaflight/unified-targets](https://github.com/betaflight/unified-targets) in attempt to convert to EmuFlight targets.  Although functional, it does not account for every combination and still requires human modification to resultant files.
+* This BASH script is a Work-In-Progress.  It downloads and processes target definitions from [Betaflight/config](https://github.com/betaflight/config) and [Betaflight/unified-targets](https://github.com/betaflight/unified-targets) in attempt to convert to EmuFlight targets.  Although functional, it does not account for every combination and still requires human modification to resultant files.
 
 #### Prerequisites:
 * `sudo apt install grep gawk sed coreutils findutils wget git`
