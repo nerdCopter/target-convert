@@ -36,3 +36,7 @@
 #### Pull-Requests to EmuFlight:
 * When making Pull-Requests to EmuFlight, do not include the `resources` sub-folder folder nor its contents. PR's should only include `VEND_TARGETNAME/target.*`.
 * Remove all unnecessary comments from the target files.
+
+#### Updating this script:
+* Be sure to keep your clone updated:
+  * `git checkout master ; git pull`
