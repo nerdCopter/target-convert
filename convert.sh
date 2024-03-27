@@ -93,7 +93,7 @@ echo ""
 manufacturer=$(echo ${1} | awk -F'-' '{print $1}')
 board=$(echo ${1} | awk -F'-' '{print $2}')
 fc="${manufacturer}_${board}"
-dest="${2}/${fc}"
+dest="${2}/${board}"
 resources="${dest}/resources"
 
 echo "creating ${fc}"

@@ -23,15 +23,15 @@
 * `./convert.sh SPBE-SPEEDYBEE_F745_AIO ../EmuFlight/src/main/target/`
 
 #### Outputs:
-* Creates a target-folder in the format `VEND_TARGETNAME` containing `target.mk`, `target.c`, `target.h`.
+* Creates a target-folder in the format `TARGETNAME` containing `target.mk`, `target.c`, `target.h`.
 * This folder also contains a sub-folder named `resources` which containing downloads and other output.
 
 #### How to compile:
 * Copy or move the new target folder to your EmuFlight's `./src/main/target/` folder.
 * Review and modify the `target.*` files as needed in a text-editor.
 * Compile and test the new target:
-  * `make VEND_TARGETNAME`, where VEND_TARGETNAME is the new target name. (Note the first underscore! Hyphen will not work.)
-    * examples: `make TURC_TUNERCF405`, `make SPBE_SPEEDYBEE_F745_AIO`.
+  * `make TARGETNAME`, where TARGETNAME is the new target name (folder name) that was created.
+    * examples: `make TUNERCF405`, `make SPEEDYBEE_F745_AIO`.
 
 #### Pull-Requests to EmuFlight:
 * When making Pull-Requests to EmuFlight, do not include the `resources` sub-folder folder nor its contents. PR's should only include `VEND_TARGETNAME/target.*`.
