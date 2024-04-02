@@ -810,7 +810,7 @@ echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)" >> ${hFile}
 echo '// notice - UART/USART were programmatically generated - please verify UART/USART.' >> ${hFile}
 echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
 echo '// notice - for any iterim non-defined TX/RX _PIN, may need to define as NONE and also include any USE_UARTx involved.' >> ${hFile}
-echo '// notice - please verify serial count. UARTs defined as NONE may need to be included.' >> ${hFile}
+echo '// notice - please verify serial count. VCP+UARTs+SOFTSERIALs (uncertain about skipped UARTs and USARTs)' >> ${hFile}
 echo '' >> ${hFile}
 
 # BF config.h:
