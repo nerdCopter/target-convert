@@ -901,6 +901,12 @@ echo ' - BARO/MAG likely incomplete - please inspect and rectify.'
 #BARO_I2C_INSTANCE #would be duplicated by grep I2CDEV_${i}
 grep BARO_CS_PIN $config >> ${hFile}
 grep BARO_SPI_INSTANCE $config >> ${hFile}
+if [[ $(grep USE_BARO_.*BMP280 $config) && $(grep BARO_CS_PIN $config) ]] ; then
+    BARO_CS=$(grep -w BARO_CS_PIN $config | awk -F' ' '{print $3}')
+    BARO_SPI=$(grep -w BARO_SPI_INSTANCE $config | awk -F' ' '{print $3}')
+    echo "#define BMP280_CS_PIN       ${BARO_CS}" >> ${hFile}
+    echo "#define BMP280_SPI_INSTANCE ${BARO_SPI}" >> ${hFile}
+fi
 
 # MAG
 
