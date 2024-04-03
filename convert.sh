@@ -995,6 +995,7 @@ if [[ $(grep USE_SDCARD $config) ]] ; then
     translate "BLACKBOX_DEVICE_SDCARD" $config "#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT" ${hFile}
     echo "#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4    //notice - needs validation. these are hardware dependent. known options: 2, 4, 8." >> ${hFile}
     echo "#define SDCARD_SPI_INITIALIZATION_CLOCK_DIVIDER 256  //notice - needs validation. these are hardware dependent. known options: 128, 256" >> ${hFile}
+    grep SDCARD_DETECT_INVERTED $config >> ${hFile}
     echo '' >> ${hFile}
 fi
 
@@ -1062,9 +1063,6 @@ if [[ $(grep 'PINIO[0-9]_' $config >> ${hFile}) ]] ; then
 fi
 
 echo "building misc/inverted"
-
-# inverted sdcard
-grep SDCARD_DETECT_INVERTED $config >> ${hFile}
 
 # inverted button
 grep "BUTTON_[AB]_PIN_INVERTED" $config >> ${hFile}
