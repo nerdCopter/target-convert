@@ -34,7 +34,7 @@
     * examples: `make TUNERCF405`, `make SPEEDYBEE_F745_AIO`.
 
 #### Pull-Requests to EmuFlight:
-* When making Pull-Requests to EmuFlight, do not include the `resources` sub-folder folder nor its contents. PR's should only include `VEND_TARGETNAME/target.*`.
+* When making Pull-Requests to EmuFlight, do not include the `resources` sub-folder folder nor its contents. PR's should only include `TARGETNAME/target.*`.
 * Remove all unnecessary comments from the target files.
 
 #### Updating this script:
