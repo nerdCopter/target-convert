@@ -263,6 +263,23 @@ translate USE_ACC_SPI_ICM426 ${config} 'drivers/accgyro/accgyro_spi_icm426xx.c \
 translate USE_ACCGYRO_BMI270 ${config} 'drivers/accgyro/accgyro_spi_bmi270.c \' ${mkFile}
 # skipping legacy, skipping 6050, skipping non-supported
 
+# FrSky SPI
+if [[ $(grep RX_SPI_FRSKY $config) ]] ; then
+    echo 'drivers/rx/rx_cc2500.c \' >> ${mkFile}
+    echo 'rx/cc2500_common.c \' >> ${mkFile}
+    echo 'rx/cc2500_frsky_shared.c \' >> ${mkFile}
+    echo 'rx/cc2500_frsky_d.c \' >> ${mkFile}
+    echo 'rx/cc2500_frsky_x.c \' >> ${mkFile}
+    echo 'rx/cc2500_redpine.c \' >> ${mkFile}
+    echo 'rx/cc2500_sfhss.c \' >> ${mkFile}
+fi
+
+# FlySky SPI
+if [[ $(grep RX_SPI_A7105_FLYSKY_2A $config) ]] ; then
+    echo 'drivers/rx/rx_a7105.c \' >> ${mkFile}
+    echo 'rx/flysky.c \' >> ${mkFile}
+fi
+
 # barometers
 
 # emuflight supported
@@ -870,8 +887,35 @@ echo '' >> ${hFile}
 # RX SPI vs SERIAL
 if [[ $(grep 'RX_SPI_' $config) ]] ; then
     featureRX='FEATURE_RX_SPI'
-    echo 'skipping SPI based RX. please define all RX_SPI_ manually; too complex for automation; ELRS not supported by EmuFlight.'
+
+    if  [[ $(grep 'RX_SPI_FRSKY_X' $config) ]] ; then
+        echo '#define RX_SPI_DEFAULT_PROTOCOL RX_SPI_FRSKY_X' >> ${hFile}
+    fi
+
+    if  [[ $(grep 'RX_SPI_FRSKY_D' $config) ]] ; then
+        echo '#define RX_SPI_DEFAULT_PROTOCOL RX_SPI_FRSKY_D' >> ${hFile}
+    fi
+
+    grep 'RX_SPI_'  $config >> ${hFile}
+    grep 'RX_CC2500_SPI_'  $config >> ${hFile}
+    sed -i 's/RX_SPI_CC2500_/RX_CC2500_SPI_/g' ${hFile} #translate the transposed defines
+
+    translate 'RX_SPI_BIND_PIN' $config "#define BINDPLUG_PIN $(grep 'RX_SPI_BIND_PIN' $config | awk -F' ' '{print $3}' )" ${hFile}
+
+    grep 'USE_RX_FRSKY_SPI_TELEMETRY' $config >> ${hFile}
+    grep 'USE_TELEMETRY_FRSKY_HUB' $config >> ${hFile}
+    grep 'RX_FRSKY_SPI_LED_PIN_INVERTED' $config >> ${hFile}
+
+    if  [[ $(grep 'RX_SPI_A7105_FLYSKY_2A' $config) ]] ; then
+        echo '#define USE_RX_FLYSKY' >> ${hFile}
+        echo '#define RX_SPI_DEFAULT_PROTOCOL RX_SPI_A7105_FLYSKY_2A' >> ${hFile}
+    fi
+
+    echo 'skipping some SPI based RX. please define all RX_SPI_ manually; too complex for automation; ELRS not supported by EmuFlight.'
     echo '// notice - please manually add all SPI based receiver definitions. complexity for these is currently beyond scope of automation.' >> ${hFile}
+    echo '//          e.g. USE_RX_CC2500_*, RX_CC2500_SPI_*' >> ${hFile}
+    echo '//          e.g. FLYSKY_2A_CHANNEL_COUNT, USE_RX_FLYSKY_SPI_LED, RX_FLYSKY_SPI_LED_PIN' >> ${hFile}
+    echo '' >> ${hFile}
 else
     featureRX='FEATURE_RX_SERIAL'
 fi
@@ -978,10 +1022,12 @@ echo '' >> ${hFile}
 
 ## flash
 echo "building FLASH"
-grep FLASH_CS_PIN $config >> ${hFile}
-grep FLASH_SPI_INSTANCE $config >> ${hFile}
-translate "BLACKBOX_DEVICE_FLASH" $config '#define ENABLE_BLACKBOX_LOGGING_ON_SPIFLASH_BY_DEFAULT' ${hFile}
-echo '' >> ${hFile}
+if [[ $(grep 'USE_FLASH' $config) ]] ; then
+    grep FLASH_CS_PIN $config >> ${hFile}
+    grep FLASH_SPI_INSTANCE $config >> ${hFile}
+    translate "BLACKBOX_DEVICE_FLASH" $config '#define ENABLE_BLACKBOX_LOGGING_ON_SPIFLASH_BY_DEFAULT' ${hFile}
+    echo '' >> ${hFile}
+fi
 
 ## sdcard
 if [[ $(grep USE_SDCARD $config) ]] ; then
@@ -1004,9 +1050,11 @@ echo "skipping GPS"
 
 ## max7456
 echo "building MAX7456"
-grep MAX7456_SPI_CS_PIN $config >> ${hFile}
-grep MAX7456_SPI_INSTANCE $config >> ${hFile}
-echo '' >> ${hFile}
+if [[ $(grep 'USE_MAX7456' $config) ]] ; then
+    grep MAX7456_SPI_CS_PIN $config >> ${hFile}
+    grep MAX7456_SPI_INSTANCE $config >> ${hFile}
+    echo '' >> ${hFile}
+fi
 
 ## adc, default voltage/current, scale
 echo "building ADC"
@@ -1032,7 +1080,6 @@ do
         #echo "$adcDmaString"
         #echo "#define ADC${i}_DMA_STREAM DMA${dma}_Stream${stream} //${adcDmaString}"
     fi
-
 done
 echo ' - please verify ADC DMA Streams.'
 grep "DEFAULT_VOLTAGE_METER_SOURCE" $config >> ${hFile}
@@ -1044,16 +1091,20 @@ echo '' >> ${hFile}
 
 ## dshot
 echo "building DMAR"
-translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_ON" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
-#translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_AUTO" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
+if [[ $(grep DSHOT_DMAR $config) ]] ; then
+    translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_ON" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
+    translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_OFF" $config "#define ENABLE_DSHOT_DMAR false" ${hFile}
+    #translate "DEFAULT_DSHOT_BURST DSHOT_DMAR_AUTO" $config "#define ENABLE_DSHOT_DMAR true" ${hFile}
+    echo '' >> ${hFile}
+fi
 
 ## esc serial timer
 echo "building ESC"
 if [[ $(grep ESCSERIAL $config) ]] ; then
     echo '#define USE_ESCSERIAL' >> ${hFile}
     translate "ESCSERIAL_PIN" $config "#define ESCSERIAL_TIMER_TX_PIN $(grep "ESCSERIAL_PIN" $config | awk '{print          $3}')" ${hFile}
+    echo '' >> ${hFile}
 fi
-echo '' >> ${hFile}
 
 # pinio
 echo "building PINIO"
@@ -1062,10 +1113,13 @@ if [[ $(grep 'PINIO[0-9]_' $config >> ${hFile}) ]] ; then
     echo '' >> $hFile
 fi
 
-echo "building misc/inverted"
-
-# inverted button
-grep "BUTTON_[AB]_PIN_INVERTED" $config >> ${hFile}
+# button
+echo "building button"
+if [[ $(grep BUTTON_[AB] $config) ]] ; then
+    grep 'USB_MSC_BUTTON_PIN' >> ${hFile}
+    grep "BUTTON_[AB]" $config >> ${hFile}
+    echo '' >> ${hFile}
+fi
 
 echo '// notice - this file was programmatically generated and may not have accounted for any config instance of "#define TLM_INVERTED ON", etc.' >> ${hFile}
 echo '' >> ${hFile}
