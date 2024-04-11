@@ -257,11 +257,12 @@ translate USE_GYRO_SPI_MPU6500 ${config} 'drivers/accgyro/accgyro_mpu6500.c \' $
 translate USE_GYRO_SPI_MPU6500 ${config} 'drivers/accgyro/accgyro_spi_mpu6500.c \' ${mkFile}
 translate USE_GYRO_SPI_MPU9250 ${config} 'drivers/accgyro/accgyro_spi_mpu9250.c \' ${mkFile}
 translate USE_GYRO_SPI_ICM20689 ${config} 'drivers/accgyro/accgyro_spi_icm20689.c \' ${mkFile}
-translate USE_GYRO_SPI_ICM20601 ${config} 'drivers/accgyro/accgyro_spi_icm20601.c \' ${mkFile}
-translate USE_GYRO_SPI_ICM20602 ${config} 'drivers/accgyro/accgyro_spi_icm20602.c \' ${mkFile}
+translate USE_GYRO_SPI_ICM20601 ${config} 'drivers/accgyro/accgyro_spi_mpu6500.c \' ${mkFile} #ICM20601 is detected via MPU6500 drivers
+translate USE_GYRO_SPI_ICM20602 ${config} 'drivers/accgyro/accgyro_spi_mpu6500.c \' ${mkFile} #ICM20602 is detected via MPU6500 drivers
 translate USE_ACC_SPI_ICM426 ${config} 'drivers/accgyro/accgyro_spi_icm426xx.c \' ${mkFile}
 translate USE_ACCGYRO_BMI270 ${config} 'drivers/accgyro/accgyro_spi_bmi270.c \' ${mkFile}
 # skipping legacy, skipping 6050, skipping non-supported
+
 
 # FrSky SPI
 if [[ $(grep RX_SPI_FRSKY $config) ]] ; then
@@ -1188,6 +1189,7 @@ echo '// notice - this file was programmatically generated and may be incomplete
 echo 'cleaning files'
 sed '/"TODO"/d' -i ${hFile}
 awk -i inplace '!(NF && seen[$0]++)' ${hFile} # deduplicate, but skip empty lines
+awk -i inplace '!(NF && seen[$0]++)' ${mkFile} # deduplicate, but skip empty lines
 
 echo ''
 echo 'Task finished. No guarantees; Definitions are likely incomplete.'
