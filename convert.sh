@@ -739,10 +739,17 @@ if [[ $(grep SPI_MPU6000 $config) ]] ; then
     echo '' >> ${hFile}
 fi
 
-# MPU6500
+# MPU6500 / ICM2060x
 #define USE_ACC_SPI_MPU6500
 #define USE_GYRO_SPI_MPU6500
-if [[ $(grep SPI_MPU6500 $config) ]] ; then
+#define USE_ACC_SPI_ICM20601
+#define USE_GYRO_SPI_ICM20601
+#define USE_ACC_SPI_ICM20602
+#define USE_GYRO_SPI_ICM20602
+if [ [ $(grep SPI_MPU6500 $config) ] || [ $(grep SPI_ICM2060[1-2] $config) ] ] ; then
+    if [[ $(grep SPI_ICM2060[1-2] $config) ]] ; then
+        echo "// ICM2060x detected by MPU6500 driver" >> $hFile
+    fi;
     # convert gyro1 > mpu -- this may need changing later
     if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
         echo "#define ACC_MPU6500_ALIGN         ${G1_align}" >> $hFile
