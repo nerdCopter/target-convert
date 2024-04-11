@@ -595,7 +595,7 @@ echo '' >> ${hFile}
 echo '#define USE_VCP' >> ${hFile}
 if [[ $(grep USE_FLASH $config) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
-    echo '#define USE_FLASH_M25P16    // 16MB Micron M25P16 and others (ref: https://github.com/betaflight/betaflight/blob/master/src/main/drivers/flash_m25p16.c)' >> ${hFile}
+    echo '#define USE_FLASH_M25P16    // 16MB Micron M25P16 driver; drives all unless QSPI' >> ${hFile}
     echo '//#define USE_FLASH_W25M    // 1Gb NAND flash support' >> ${hFile}
     echo '//#define USE_FLASH_W25M512 // 16, 32, 64 or 128MB Winbond stacked die support' >> ${hFile}
     echo '//#define USE_FLASH_W25Q    // 512Kb (256Kb x 2 stacked) NOR flash support' >> ${hFile}
