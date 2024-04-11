@@ -498,9 +498,10 @@ do
     led=$(grep "${pinArray[$i]}" $unified | grep LED)
     cam=$(grep "${pinArray[$i]}" $unified | grep CAMERA)
     baro=$(grep "${pinArray[$i]}" $unified | grep BARO)
+    pwm=$(grep "${pinArray[$i]}" $unified | grep PWM)
     if [[ $ppm ]] ; then
         timUse="TIM_USE_PPM"
-        comment="ppm"
+        comment="ppm $(grep "PPM_PIN.*${convertedPinArray[$i]}" $config | awk -F' ' '{print $2}')"
     elif [[ $led ]] ; then
         timUse="TIM_USE_LED"
         comment="led"
@@ -510,6 +511,9 @@ do
     elif [[ $baro ]] ; then
         timUse="TIM_USE_ANY"
         comment="baro"
+    elif [[ $pwm ]] ; then
+        timUse="TIM_USE_PWM"
+        comment="pwm $(grep "PWM[1-9]_PIN.*${convertedPinArray[$i]}" $config | awk -F' ' '{print $2}')"
     else
         timUse="TIM_USE_ANY"
         comment="could not determine TIM_USE_xxxxx - please check"
