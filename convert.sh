@@ -6,7 +6,7 @@
 # Open to receiving more efficient and elegant code.
 # July 2023 and later revision requires Internet connection for automated definitions download.
 
-if ! [ $# -eq 2 ]  2>/dev/null; then
+if [[ ! $# -eq 2 ]]  2>/dev/null; then
     echo "EmuFlight partial target converter script."
     echo "Usage: ${0##*/} <unifiedTargetName> <targetFolder>"
     echo "   Ex: ${0##*/} TURC-TUNERCF405 ./"
@@ -502,7 +502,7 @@ do
     pwm=$(grep "${pinArray[$i]}" $unified | grep PWM)
     if [[ $ppm ]] ; then
         timUse="TIM_USE_PPM"
-        comment="ppm $(grep "PPM_PIN.*${convertedPinArray[$i]}" $config | awk -F' ' '{print $2}')"
+        comment="ppm $(grep -m 1 "PPM_PIN.*${convertedPinArray[$i]}" $config | awk -F' ' '{print $2}')"
     elif [[ $led ]] ; then
         timUse="TIM_USE_LED"
         comment="led"
@@ -514,7 +514,7 @@ do
         comment="baro"
     elif [[ $pwm ]] ; then
         timUse="TIM_USE_PWM"
-        comment="pwm $(grep "PWM[1-9]_PIN.*${convertedPinArray[$i]}" $config | awk -F' ' '{print $2}')"
+        comment="pwm $(grep -m 1 "PWM[1-9]_PIN.*${convertedPinArray[$i]}" $config | awk -F' ' '{print $2}')"
     else
         timUse="TIM_USE_ANY"
         comment="could not determine TIM_USE_xxxxx - please check"
@@ -671,7 +671,7 @@ G1_csPin=$(grep -w GYRO_1_CS_PIN $config | awk -F' ' '{print $3}')
 G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $config | awk -F' ' '{print $3}')
 G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}')
 
-if  ! [[ $(grep "GYRO_2_" $config) ]] ; then
+if [[ ! $(grep "GYRO_2_" $config) ]] ; then
     if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
         echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
         # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
@@ -1182,7 +1182,7 @@ usedTimers=''
 for i in {1..20}
 do
     if [[ $(grep "TIM${i} CH" $unified) ]] ; then
-        if ! [[ $usedTimers == '' ]] ; then
+        if [[ $usedTimers != '' ]] ; then
             usedTimers+="|"
         fi
         usedTimers+=" TIM_N(${i}) "
