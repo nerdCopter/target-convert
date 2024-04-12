@@ -659,6 +659,7 @@ if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $config) ]] ; then
     echo '#define USE_GYRO_EXTI' >> $hFile
     echo '' >> ${hFile}
 fi
+
 # mpu
 if [[ $(grep SPI_MPU $config) ]] ; then
     echo '#define USE_MPU_DATA_READY_SIGNAL' >> ${hFile}
@@ -666,27 +667,31 @@ if [[ $(grep SPI_MPU $config) ]] ; then
     echo '' >> ${hFile}
 fi
 
+G1_csPin=$(grep -w GYRO_1_CS_PIN $config | awk -F' ' '{print $3}')
+G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $config | awk -F' ' '{print $3}')
+G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}')
+
+if  ! [[ $(grep "GYRO_2_" $config) ]] ; then
+    if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
+        echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
+        # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
+        # echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN at this time. (ref: https://github.com/emuflight/EmuFlight/blob/master/src/main/sensors/gyro.c)' >> ${hFile}
+        echo '' >> ${hFile}
+    fi
+fi
+
 if [[ $(grep -w GYRO_1_ALIGN $config) ]] ; then
-    grep -w GYRO_1_ALIGN $config >> ${hFile}  # -w avoid _ALIGN_YAW
     G1_align=$(grep -w GYRO_1_ALIGN $config | awk -F' ' '{print $3}')
 else
     G1_align='CW0_DEG' # default
+fi
+if [[ $(grep "GYRO_2_" $config) ]] ; then # only define GYRO_1 when GYRO_2 exists; will otherwise define actual GYRO
+    echo "#define ACC_1_ALIGN          ${G1_align}" >> ${hFile}
     echo "#define GYRO_1_ALIGN         ${G1_align}" >> ${hFile}
+    grep GYRO_1_CS_PIN $config >> ${hFile}
+    grep GYRO_1_EXTI_PIN $config >> ${hFile}
+    grep GYRO_1_SPI_INSTANCE $config >> ${hFile}
 fi
-echo "#define ACC_1_ALIGN          ${G1_align}" >> ${hFile}
-grep GYRO_1_CS_PIN $config >> ${hFile}
-G1_csPin=$(grep -w GYRO_1_CS_PIN $config | awk -F' ' '{print $3}')
-grep GYRO_1_EXTI_PIN $config >> ${hFile}
-G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $config | awk -F' ' '{print $3}')
-grep GYRO_1_SPI_INSTANCE $config >> ${hFile}
-G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}')
-
-if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
-    echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
-    # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
-    echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN at this time. (ref: https://github.com/emuflight/EmuFlight/blob/master/src/main/sensors/gyro.c)' >> ${hFile}
-fi
-echo '' >> ${hFile}
 
 # dual gyro
 if [[ $(grep "GYRO_2_" $config) ]] ; then
@@ -697,14 +702,13 @@ if [[ $(grep "GYRO_2_" $config) ]] ; then
     translate "DEFAULT_GYRO_TO_USE"  $config "#define GYRO_CONFIG_USE_GYRO_DEFAULT $(grep "DEFAULT_GYRO_TO_USE" $config | awk '{print $3}')" ${hFile}
 fi
 if [[ $(grep -w GYRO_2_ALIGN $config) ]] ; then
-    grep -w GYRO_2_ALIGN $config >> ${hFile}  # -w avoid _ALIGN_YAW
     G2_align=$(grep -w GYRO_2_ALIGN $config | awk -F' ' '{print $3}')
 elif [[ $(grep  GYRO_2 $config) ]] ; then
     G2_align='CW0_DEG' # default
-    echo "#define GYRO_2_ALIGN         ${G2_align}" >> ${hFile}
 fi
 if [[ $(grep "GYRO_2_" $config) ]] ; then
     echo "#define ACC_2_ALIGN          ${G2_align}" >> ${hFile}
+    echo "#define GYRO_2_ALIGN         ${G2_align}" >> ${hFile}
     grep GYRO_2_CS_PIN $config >> ${hFile}
     grep GYRO_2_EXTI_PIN $config >> ${hFile}
     grep GYRO_2_SPI_INSTANCE $config >> ${hFile}
