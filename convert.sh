@@ -684,8 +684,8 @@ G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}')
 if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
     echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
     # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
+    echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN at this time. (ref: https://github.com/emuflight/EmuFlight/blob/master/src/main/sensors/gyro.c)' >> ${hFile}
 fi
-echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN at this time. (ref: https://github.com/emuflight/EmuFlight/blob/master/src/main/sensors/gyro.c)' >> ${hFile}
 echo '' >> ${hFile}
 
 # dual gyro
@@ -709,101 +709,100 @@ if [[ $(grep "GYRO_2_" $config) ]] ; then
     grep GYRO_2_EXTI_PIN $config >> ${hFile}
     grep GYRO_2_SPI_INSTANCE $config >> ${hFile}
     echo '' >> ${hFile}
-fi
-
-#MPU9250
-#define USE_GYRO_SPI_MPU9250
-#define USE_ACC_SPI_MPU9250
-if [[ $(grep SPI_MPU9250 $config) ]] ; then
-    # convert gyro1 > mpu -- this may need changing later
-    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
-        echo "#define ACC_MPU9250_ALIGN         ${G1_align}" >> $hFile
-        echo "#define GYRO_MPU9250_ALIGN        ${G1_align}" >> $hFile
-        echo "#define MPU9250_CS_PIN            ${G1_csPin}" >> $hFile
-        echo "#define MPU9250_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+else #individual gyro/all defines
+    #MPU9250
+    #define USE_GYRO_SPI_MPU9250
+    #define USE_ACC_SPI_MPU9250
+    if [[ $(grep SPI_MPU9250 $config) ]] ; then
+        # convert gyro1 > mpu -- this may need changing later
+        if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
+            echo "#define ACC_MPU9250_ALIGN         ${G1_align}" >> $hFile
+            echo "#define GYRO_MPU9250_ALIGN        ${G1_align}" >> $hFile
+            echo "#define MPU9250_CS_PIN            ${G1_csPin}" >> $hFile
+            echo "#define MPU9250_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+        fi
+        echo '' >> ${hFile}
     fi
-    echo '' >> ${hFile}
-fi
 
-# MPU6000
-#define USE_ACC_SPI_MPU6000
-#define USE_GYRO_SPI_MPU6000
-if [[ $(grep SPI_MPU6000 $config) ]] ; then
-    # convert gyro1 > mpu -- this may need changing later
-    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
-        echo "#define ACC_MPU6000_ALIGN         ${G1_align}" >> $hFile
-        echo "#define GYRO_MPU6000_ALIGN        ${G1_align}" >> $hFile
-        echo "#define MPU6000_CS_PIN            ${G1_csPin}" >> $hFile
-        echo "#define MPU6000_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+    # MPU6000
+    #define USE_ACC_SPI_MPU6000
+    #define USE_GYRO_SPI_MPU6000
+    if [[ $(grep SPI_MPU6000 $config) ]] ; then
+        # convert gyro1 > mpu -- this may need changing later
+        if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
+            echo "#define ACC_MPU6000_ALIGN         ${G1_align}" >> $hFile
+            echo "#define GYRO_MPU6000_ALIGN        ${G1_align}" >> $hFile
+            echo "#define MPU6000_CS_PIN            ${G1_csPin}" >> $hFile
+            echo "#define MPU6000_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+        fi
+        echo '' >> ${hFile}
     fi
-    echo '' >> ${hFile}
-fi
 
-# MPU6500 / ICM2060x
-#define USE_ACC_SPI_MPU6500
-#define USE_GYRO_SPI_MPU6500
-#define USE_ACC_SPI_ICM20601
-#define USE_GYRO_SPI_ICM20601
-#define USE_ACC_SPI_ICM20602
-#define USE_GYRO_SPI_ICM20602
-if [ [ $(grep SPI_MPU6500 $config) ] || [ $(grep SPI_ICM2060[1-2] $config) ] ] ; then
-    if [[ $(grep SPI_ICM2060[1-2] $config) ]] ; then
-        echo "// ICM2060x detected by MPU6500 driver" >> $hFile
-    fi;
-    # convert gyro1 > mpu -- this may need changing later
-    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
-        echo "#define ACC_MPU6500_ALIGN         ${G1_align}" >> $hFile
-        echo "#define GYRO_MPU6500_ALIGN        ${G1_align}" >> $hFile
-        echo "#define MPU6500_CS_PIN            ${G1_csPin}" >> $hFile
-        echo "#define MPU6500_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+    # MPU6500 / ICM2060x
+    #define USE_ACC_SPI_MPU6500
+    #define USE_GYRO_SPI_MPU6500
+    #define USE_ACC_SPI_ICM20601
+    #define USE_GYRO_SPI_ICM20601
+    #define USE_ACC_SPI_ICM20602
+    #define USE_GYRO_SPI_ICM20602
+    if [[ $(grep SPI_MPU6500 $config) ]] || [[ $(grep SPI_ICM2060[1-2] $config) ]] ; then
+        if [[ $(grep SPI_ICM2060[1-2] $config) ]] ; then
+            echo "// ICM2060x detected by MPU6500 driver" >> $hFile
+        fi;
+        # convert gyro1 > mpu -- this may need changing later
+        if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
+            echo "#define ACC_MPU6500_ALIGN         ${G1_align}" >> $hFile
+            echo "#define GYRO_MPU6500_ALIGN        ${G1_align}" >> $hFile
+            echo "#define MPU6500_CS_PIN            ${G1_csPin}" >> $hFile
+            echo "#define MPU6500_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+        fi
+        echo '' >> ${hFile}
     fi
-    echo '' >> ${hFile}
-fi
 
-# ICM20689
-#define USE_ACC_SPI_ICM20689
-#define USE_GYRO_SPI_ICM20689
-if [[ $(grep SPI_ICM20689 $config) ]] ; then
-    # convert gyro1 > icm -- this may need changing later
-    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
-        echo "#define ACC_ICM20689_ALIGN         ${G1_align}" >> $hFile
-        echo "#define GYRO_ICM20689_ALIGN        ${G1_align}" >> $hFile
-        echo "#define ICM20689_CS_PIN            ${G1_csPin}" >> $hFile
-        echo "#define ICM20689_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+    # ICM20689
+    #define USE_ACC_SPI_ICM20689
+    #define USE_GYRO_SPI_ICM20689
+    if [[ $(grep SPI_ICM20689 $config) ]] ; then
+        # convert gyro1 > icm -- this may need changing later
+        if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
+            echo "#define ACC_ICM20689_ALIGN         ${G1_align}" >> $hFile
+            echo "#define GYRO_ICM20689_ALIGN        ${G1_align}" >> $hFile
+            echo "#define ICM20689_CS_PIN            ${G1_csPin}" >> $hFile
+            echo "#define ICM20689_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+        fi
+        echo '' >> ${hFile}
     fi
-    echo '' >> ${hFile}
-fi
 
-# ICM42688P
-#define USE_GYRO_SPI_ICM42688P
-#define USE_ACC_SPI_ICM42688P
-if [[ $(grep SPI_ICM42688P $config) ]] ; then
-    # convert gyro1 > icm -- this may need changing later
-    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
-        echo "#define ACC_ICM42688P_ALIGN      ${G1_align}" >> $hFile
-        echo "#define GYRO_ICM42688P_ALIGN     ${G1_align}" >> $hFile
-        echo "#define ICM42688P_CS_PIN         ${G1_csPin}" >> $hFile
-        echo "#define ICM42688P_SPI_INSTANCE   ${G1_spi}"  >> $hFile
+    # ICM42688P
+    #define USE_GYRO_SPI_ICM42688P
+    #define USE_ACC_SPI_ICM42688P
+    if [[ $(grep SPI_ICM42688P $config) ]] ; then
+        # convert gyro1 > icm -- this may need changing later
+        if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
+            echo "#define ACC_ICM42688P_ALIGN      ${G1_align}" >> $hFile
+            echo "#define GYRO_ICM42688P_ALIGN     ${G1_align}" >> $hFile
+            echo "#define ICM42688P_CS_PIN         ${G1_csPin}" >> $hFile
+            echo "#define ICM42688P_SPI_INSTANCE   ${G1_spi}"  >> $hFile
+        fi
+        echo '' >> ${hFile}
     fi
-    echo '' >> ${hFile}
-fi
 
-# BMI270
-#define USE_ACCGYRO_BMI270
-#define USE_SPI_GYRO
-if [[ $(grep ACCGYRO_BMI270 $config) ]] ; then
-    # convert gyro1 > icm -- this may need changing later
-    echo '#define USE_SPI_GYRO' >> $hFile
-    if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
-        echo "#define ACC_BMI270_ALIGN         ${G1_align}" >> $hFile
-        echo "#define GYRO_BMI270_ALIGN        ${G1_align}" >> $hFile
-        echo "#define BMI270_CS_PIN            ${G1_csPin}" >> $hFile
-        echo "#define BMI270_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+    # BMI270
+    #define USE_ACCGYRO_BMI270
+    #define USE_SPI_GYRO
+    if [[ $(grep ACCGYRO_BMI270 $config) ]] ; then
+        # convert gyro1 > icm -- this may need changing later
+        echo '#define USE_SPI_GYRO' >> $hFile
+        if [[ $(grep GYRO_1_SPI_INSTANCE $config) ]] ; then
+            echo "#define ACC_BMI270_ALIGN         ${G1_align}" >> $hFile
+            echo "#define GYRO_BMI270_ALIGN        ${G1_align}" >> $hFile
+            echo "#define BMI270_CS_PIN            ${G1_csPin}" >> $hFile
+            echo "#define BMI270_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+        fi
+        echo '' >> ${hFile}
     fi
-    echo '' >> ${hFile}
 fi
-
-echo '// notice - this file was programmatically generated and may need GYRO_2 manually added.' >> ${hFile}
+echo '// notice - this file was programmatically generated and may verification.' >> ${hFile}
 echo '' >> ${hFile}
 
 ## vcp, uarts, softserial
@@ -957,7 +956,7 @@ echo ' - BARO/MAG likely incomplete - please inspect and rectify.'
 #BARO_I2C_INSTANCE #would be duplicated by grep I2CDEV_${i}
 grep BARO_CS_PIN $config >> ${hFile}
 grep BARO_SPI_INSTANCE $config >> ${hFile}
-if [[ $(grep USE_BARO_.*BMP280 $config) && $(grep BARO_CS_PIN $config) ]] ; then
+if [[ $(grep USE_BARO_.*BMP280 $config) ]] && [[ $(grep BARO_CS_PIN $config) ]] ; then
     BARO_CS=$(grep -w BARO_CS_PIN $config | awk -F' ' '{print $3}')
     BARO_SPI=$(grep -w BARO_SPI_INSTANCE $config | awk -F' ' '{print $3}')
     echo "#define BMP280_CS_PIN       ${BARO_CS}" >> ${hFile}
