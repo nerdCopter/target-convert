@@ -51,14 +51,6 @@ if [[ ! $( which git ) ]] ; then
     exit 1
 fi
 
-fetch=$(git fetch)
-status=$(git status -sb)
-if [[ $(echo "$status" | grep behind) ]] ; then
-    echo ""
-    echo "Please update this script. (git pull)"
-    echo "$status"
-fi
-
 license='/*
  * This file is part of EmuFlight. It is derived from Betaflight.
  *
