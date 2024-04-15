@@ -699,6 +699,7 @@ if [[ $(grep "GYRO_2_" $config) ]] ; then # only define GYRO_1 when GYRO_2 exist
     grep GYRO_1_CS_PIN $config >> ${hFile}
     grep GYRO_1_EXTI_PIN $config >> ${hFile}
     grep GYRO_1_SPI_INSTANCE $config >> ${hFile}
+    echo '' >> ${hFile}
 fi
 
 # dual gyro
