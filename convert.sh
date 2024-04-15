@@ -584,12 +584,12 @@ echo '' >> ${hFile}
 echo '#pragma once' >> ${hFile}
 echo '' >> ${hFile}
 
-
-translate MANUFACTURER_ID $config "#define TARGET_MANUFACTURER_IDENTIFIER \"$(grep MANUFACTURER_ID $config | awk '{print $3}')\"" ${hFile} #this is technically proper
-translate BOARD_NAME $config "#define USBD_PRODUCT_STRING \"$(grep BOARD_NAME $config | awk '{print $3}')\"" ${hFile}
-echo '' >> ${hFile}
+#translate MANUFACTURER_ID $config "#define TARGET_MANUFACTURER_IDENTIFIER \"$(grep MANUFACTURER_ID $config | awk '{print $3}')\"" ${hFile} #this should be proper but fails to be used
+grep "BOARD_NAME" $config >> ${hFile}
+grep "MANUFACTURER_ID" $config >> ${hFile}
+#translate BOARD_NAME $config "#define USBD_PRODUCT_STRING \"$(grep BOARD_NAME $config | awk '{print $3}')\"" ${hFile} # not needed; this is only the string for the Computer's OS.
+echo "#define TARGET_BOARD_IDENTIFIER \"${TBID}\"  // generic ID" >> ${hFile} #required; this is essentially mcu-type or custom id
 grep "define FC_TARGET_MCU" $config | sed 's/$/     \/\/ not used in EmuF/' >> ${hFile} # not used in EmuF
-translate MANUFACTURER_ID $config "#define TARGET_BOARD_IDENTIFIER \"${TBID}\"  // generic ID" ${hFile} #seemingly deprecated in BF 4.5, resorting to unified equivalent
 echo '' >> ${hFile}
 
 # all the USE_ definitions - includes acc, gyro, flash, max, etc
