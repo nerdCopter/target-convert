@@ -193,9 +193,9 @@ elif [[ $(grep STM32F745 $config) ]]; then
     echo 'F7X5XG_TARGETS += $(TARGET)' > ${mkFile}
     TBID="S745"
 else
-    echo ' - not an F4 nor an F7.'
-    rm -r ${dest}
+    echo ' - not an STM32F4 nor an STM32F7.'
     echo ' - aborting.'
+    rm -r ${dest}
     exit
 fi
 
@@ -251,7 +251,6 @@ echo 'TARGET_SRC = \' >> ${mkFile}
 # drivers/accgyro_legacy/accgyro_lsm303dlhc.c \
 
 echo 'adding drivers'
-echo 'drivers/accgyro/accgyro_mpu.c \' >> ${mkFile} # needed irregardless (???)
 translate USE_GYRO_SPI_MPU6000 ${config} 'drivers/accgyro/accgyro_spi_mpu6000.c \' ${mkFile}
 translate USE_GYRO_SPI_MPU6500 ${config} 'drivers/accgyro/accgyro_mpu6500.c \' ${mkFile}
 translate USE_GYRO_SPI_MPU6500 ${config} 'drivers/accgyro/accgyro_spi_mpu6500.c \' ${mkFile}
