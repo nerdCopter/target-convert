@@ -1038,7 +1038,7 @@ for i in {1..4}
 do
     if [[ $(grep "I2C${i}_" $config) ]] ; then
         echo "#define USE_I2C_DEVICE_${i}" >> ${hFile}
-        echo "#define I2C_DEVICE        (I2CDEV_${i})" >> ${hFile}
+        echo "#define I2C_DEVICE_${i}      (I2CDEV_${i})" >> ${hFile}
     fi
     grep I2CDEV_${i} $config >> ${hFile} # duplicates MAG_I2C_INSTANCE
     if [[ $(grep "USE_I2C${i}_PULLUP ON" $config) ]] ; then
