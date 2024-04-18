@@ -356,6 +356,7 @@ echo 'drivers/max7456.c \' >> ${mkFile}
 # echo 'drivers/barometer/barometer_lps.c \' >> ${mkFile}
 # echo 'drivers/barometer/barometer_ms5611.c \' >> ${mkFile}
 # echo 'drivers/barometer/barometer_qmp6988.c \' >> ${mkFile}
+# echo 'drivers/compass/compass_fake.c \' >> ${mkFile}
 # echo 'drivers/compass/compass_ak8963.c \' >> ${mkFile}
 # echo 'drivers/compass/compass_ak8975.c \' >> ${mkFile}
 # echo 'drivers/compass/compass_hmc5883l.c \' >> ${mkFile}
