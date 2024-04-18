@@ -329,10 +329,15 @@ translate USE_BARO_QMP6988 ${config} 'drivers/barometer/barometer_qmp6988.c \' $
 # drivers/compass/compass_hmc5883l.c \
 # drivers/compass/compass_lis3mdl.c \
 # drivers/compass/compass_qmc5883l.c \
-translate USE_MAG_SPI_AK8963 ${config} 'drivers/compass/compass_ak8963.c \' ${mkFile}
-translate USE_MAG_HMC5883 ${config} 'drivers/compass/compass_hmc5883l.c \' ${mkFile}
-translate USE_MAG_QMC5883 ${config} 'drivers/compass/compass_qmc5883l.c \' ${mkFile}
-translate USE_MAG_LIS3MDL ${config} 'drivers/compass/compass_lis3mdl.c \' ${mkFile}
+
+# commenting out individual MAGs in favor of wildcard
+#translate USE_MAG_SPI_AK8963 ${config} 'drivers/compass/compass_ak8963.c \' ${mkFile}
+#translate USE_MAG_HMC5883 ${config} 'drivers/compass/compass_hmc5883l.c \' ${mkFile}
+#translate USE_MAG_QMC5883 ${config} 'drivers/compass/compass_qmc5883l.c \' ${mkFile}
+#translate USE_MAG_LIS3MDL ${config} 'drivers/compass/compass_lis3mdl.c \' ${mkFile}
+if [[ $(grep MAG_ $config) ]] ; then
+    echo '$(addprefix drivers/compass/,$(notdir $(wildcard $(SRC_DIR)/drivers/compass/*.c))) \' >> ${mkFile}
+fi
 
 # skipping vtx 6705
 echo 'skipping any VTX RTC6705; please manually modify target.mk if necessary.'
@@ -351,6 +356,7 @@ translate PINIO ${config} 'drivers/pinio.c \' ${mkFile}
 echo 'drivers/max7456.c \' >> ${mkFile}
 
 # all the baro/mag drivers in case external baro/mag
+# echo 'drivers/barometer/barometer_fake.c \' >> ${mkFile}
 # echo 'drivers/barometer/barometer_bmp085.c \' >> ${mkFile}
 # echo 'drivers/barometer/barometer_bmp280.c \' >> ${mkFile}
 # echo 'drivers/barometer/barometer_lps.c \' >> ${mkFile}
