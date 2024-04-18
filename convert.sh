@@ -651,12 +651,14 @@ echo '' >> ${hFile}
 echo "building GYRO"
 if [[ $(grep GYRO_SPI $config) ]] ; then
     echo '#define USE_SPI_GYRO' >> $hFile
+    echo ' - defined USE_SPI_GYRO'
 fi;
 
 # exti
 if [[ $(grep "GYRO_[1-2]_EXTI_PIN" $config) ]] ; then
-    echo '#define USE_EXTI // notice - REQUIRED when USE_GYRO_EXTI' >> $hFile
+    echo '#define USE_EXTI' >> $hFile
     echo '#define USE_GYRO_EXTI' >> $hFile
+    echo ' - defined USE_EXTI and USE_GYRO_EXTI'
     echo '' >> ${hFile}
 fi
 
@@ -664,6 +666,7 @@ fi
 if [[ $(grep SPI_MPU $config) ]] ; then
     echo '#define USE_MPU_DATA_READY_SIGNAL' >> ${hFile}
     grep ENSURE_MPU_DATA_READY_IS_LOW $config >> ${hFile}
+    echo ' - defined MPU ready'
     echo '' >> ${hFile}
 fi
 
@@ -674,6 +677,7 @@ G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}')
 if [[ ! $(grep "GYRO_2_" $config) ]] ; then
     if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
         echo "#define MPU_INT_EXTI         ${G1_extiPin}" >> $hFile
+        echo ' - defined MPU_INT_EXTI'
         # gyro 2 will be gyro_2_, no need for another MPU_INT_EXTI
         # echo '// notice - GYRO_1_EXTI_PIN and MPU_INT_EXTI may be used interchangeably; there is no other [gyroModel]_EXTI_PIN at this time. (ref: https://github.com/emuflight/EmuFlight/blob/master/src/main/sensors/gyro.c)' >> ${hFile}
         echo '' >> ${hFile}
@@ -691,6 +695,7 @@ if [[ $(grep "GYRO_2_" $config) ]] ; then # only define GYRO_1 when GYRO_2 exist
     grep GYRO_1_CS_PIN $config >> ${hFile}
     grep GYRO_1_EXTI_PIN $config >> ${hFile}
     grep GYRO_1_SPI_INSTANCE $config >> ${hFile}
+    echo ' - defined GYRO_1'
     echo '' >> ${hFile}
 fi
 
@@ -713,6 +718,7 @@ if [[ $(grep "GYRO_2_" $config) ]] ; then
     grep GYRO_2_CS_PIN $config >> ${hFile}
     grep GYRO_2_EXTI_PIN $config >> ${hFile}
     grep GYRO_2_SPI_INSTANCE $config >> ${hFile}
+    echo ' - defined GYRO_2'
     echo '' >> ${hFile}
 else #individual gyro/all defines
     #MPU9250
@@ -725,6 +731,7 @@ else #individual gyro/all defines
             echo "#define GYRO_MPU9250_ALIGN       ${G1_align}" >> $hFile
             echo "#define MPU9250_CS_PIN           ${G1_csPin}" >> $hFile
             echo "#define MPU9250_SPI_INSTANCE     ${G1_spi}"  >> $hFile
+            echo ' - defined MPU9250'
         fi
         echo '' >> ${hFile}
     fi
@@ -739,6 +746,7 @@ else #individual gyro/all defines
             echo "#define GYRO_MPU6000_ALIGN       ${G1_align}" >> $hFile
             echo "#define MPU6000_CS_PIN           ${G1_csPin}" >> $hFile
             echo "#define MPU6000_SPI_INSTANCE     ${G1_spi}"  >> $hFile
+            echo ' - defined MPU6000'
         fi
         echo '' >> ${hFile}
     fi
@@ -760,6 +768,7 @@ else #individual gyro/all defines
             echo "#define GYRO_MPU6500_ALIGN       ${G1_align}" >> $hFile
             echo "#define MPU6500_CS_PIN           ${G1_csPin}" >> $hFile
             echo "#define MPU6500_SPI_INSTANCE     ${G1_spi}"  >> $hFile
+            echo ' - defined MPU6500 (maybe ICM2060x)'
         fi
         echo '' >> ${hFile}
     fi
@@ -774,6 +783,7 @@ else #individual gyro/all defines
             echo "#define GYRO_ICM20689_ALIGN      ${G1_align}" >> $hFile
             echo "#define ICM20689_CS_PIN          ${G1_csPin}" >> $hFile
             echo "#define ICM20689_SPI_INSTANCE    ${G1_spi}"  >> $hFile
+            echo ' - defined ICM20689'
         fi
         echo '' >> ${hFile}
     fi
@@ -788,6 +798,7 @@ else #individual gyro/all defines
             echo "#define GYRO_ICM42688P_ALIGN     ${G1_align}" >> $hFile
             echo "#define ICM42688P_CS_PIN         ${G1_csPin}" >> $hFile
             echo "#define ICM42688P_SPI_INSTANCE   ${G1_spi}"  >> $hFile
+            echo ' - defined ICM42688P'
         fi
         echo '' >> ${hFile}
     fi
@@ -803,11 +814,11 @@ else #individual gyro/all defines
             echo "#define GYRO_BMI270_ALIGN        ${G1_align}" >> $hFile
             echo "#define BMI270_CS_PIN            ${G1_csPin}" >> $hFile
             echo "#define BMI270_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+            echo ' - defined BMI270'
         fi
         echo '' >> ${hFile}
     fi
 fi
-echo '// notice - this file was programmatically generated and may verification.' >> ${hFile}
 echo '' >> ${hFile}
 
 ## vcp, uarts, softserial
