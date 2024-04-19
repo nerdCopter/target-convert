@@ -825,7 +825,6 @@ else #individual gyro/all defines
         echo '' >> ${hFile}
     fi
 fi
-echo '' >> ${hFile}
 
 ## vcp, uarts, softserial
 echo "building UART(RX/TX), VCP, and serial-count"
