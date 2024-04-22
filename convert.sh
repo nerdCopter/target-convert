@@ -619,7 +619,7 @@ if [[ $(grep LED[0-9]_PIN $config) ]] ; then
 fi
 grep "LED[0-9]_PIN" $config >> ${hFile}
 
-if [[ $(grep LED_STRIP_PIN $config >> ${hFile}) ]] ; then
+if [[ $(grep 'define LED_STRIP_PIN' $config >> ${hFile}) ]] ; then
     echo '#define USE_LED_STRIP' >> ${hFile}
 fi
 
