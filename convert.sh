@@ -628,7 +628,7 @@ echo "building beeper, cam, usb"
 if [[ $(grep BEEPER_ $config) ]] ; then
     echo '#define USE_BEEPER' >> ${hFile}
 fi
-grep BEEPER_PIN $config >> ${hFile}
+grep 'define BEEPER_PIN' $config >> ${hFile}
 grep BEEPER_INVERTED $config >> ${hFile}
 grep CAMERA_CONTROL_PIN $config >> ${hFile}
 if [[ $(grep USB_DETECT_PIN $config) ]] ; then
