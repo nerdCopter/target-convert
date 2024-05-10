@@ -619,7 +619,7 @@ if [[ $(grep LED[0-9]_PIN $config) ]] ; then
 fi
 grep "LED[0-9]_PIN" $config >> ${hFile}
 
-if [[ $(grep 'define LED_STRIP_PIN' $config >> ${hFile}) ]] ; then
+if [[ $(grep 'define[[:space:]\+]LED_STRIP_PIN' $config >> ${hFile}) ]] ; then
     echo '#define USE_LED_STRIP' >> ${hFile}
 fi
 
@@ -628,7 +628,7 @@ echo "building beeper, cam, usb"
 if [[ $(grep BEEPER_ $config) ]] ; then
     echo '#define USE_BEEPER' >> ${hFile}
 fi
-grep 'define BEEPER_PIN' $config >> ${hFile}
+grep 'define[[:space:]\+]BEEPER_PIN' $config >> ${hFile}
 grep BEEPER_INVERTED $config >> ${hFile}
 grep CAMERA_CONTROL_PIN $config >> ${hFile}
 if [[ $(grep USB_DETECT_PIN $config) ]] ; then
@@ -835,7 +835,7 @@ for ((i=1; i<=10; i++)) #only seen 8 in EmuF, saw 10 in BF
 do
     if [[ $(grep "UART${i}_[TR]X_PIN" $config) ]] ; then
         echo "#define USE_UART${i}" >> ${hFile}
-        grep "UART${i}_[TR]X_PIN" $config >> ${hFile}
+        grep "define[[:space:]\+]UART${i}_[TR]X_PIN" $config >> ${hFile}
         ((hardserial++))
     fi
 done
