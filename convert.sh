@@ -371,7 +371,6 @@ echo 'drivers/max7456.c \' >> ${mkFile}
 
 echo '' >> ${mkFile}
 echo '# notice - this file was programmatically generated and may be incomplete.' >> ${mkFile}
-echo '# eg: flash, compass, barometer, vtx6705, ledstrip, pinio, etc.   especially mag/baro' >> ${mkFile}
 echo '' >> ${mkFile}
 echo "# ${generatedMessage}" >> ${mkFile}
 echo "# ${generatedSHA}" >> ${mkFile}
@@ -535,11 +534,6 @@ do
     #echo "    DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$i]}, ${timUse}, 0, ${dma}), // ${comment}"
 done
 echo '};' >> ${cFile}
-echo '' >> ${cFile}
-
-echo '// notice - DEF_TIM was programmatically generated and may be wrong or incomplete.' >> ${cFile}
-echo '//          please reference associated unified-target.' >> ${cFile}
-echo '//          some timers may associate with multiple pins. e.g baro/flash' >> ${cFile}
 
 echo '' >> ${cFile}
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${cFile}
@@ -603,9 +597,6 @@ echo '#define USE_VCP' >> ${hFile}
 if [[ $(grep USE_FLASH $config) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
     echo '#define USE_FLASH_M25P16    // 16MB Micron M25P16 driver; drives all unless QSPI' >> ${hFile}
-    echo '//#define USE_FLASH_W25M    // 1Gb NAND flash support' >> ${hFile}
-    echo '//#define USE_FLASH_W25M512 // 16, 32, 64 or 128MB Winbond stacked die support' >> ${hFile}
-    echo '//#define USE_FLASH_W25Q    // 512Kb (256Kb x 2 stacked) NOR flash support' >> ${hFile}
 fi
 if [[ $(grep USE_MAX7456 $config) ]] ; then
     echo '#define USE_OSD' >> ${hFile}
@@ -856,10 +847,6 @@ grep "INVERTER_PIN_UART" $config >> ${hFile}
 grep "USART" $config >> ${hFile}
 totalserial=$(expr $hardserial + $softserial)
 echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)" >> ${hFile}
-echo '// notice - UART/USART were programmatically generated - please verify UART/USART.' >> ${hFile}
-echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
-echo '// notice - for any iterim non-defined TX/RX _PIN, may need to define as NONE and also include any USE_UARTx involved.' >> ${hFile}
-echo '// notice - please verify serial count. VCP+UARTs+SOFTSERIALs (uncertain about skipped UARTs and USARTs)' >> ${hFile}
 echo '' >> ${hFile}
 
 # BF config.h:
@@ -944,9 +931,6 @@ if [[ $(grep 'RX_SPI_' $config) ]] ; then
     fi
 
     echo 'skipping some SPI based RX. please define all RX_SPI_ manually; too complex for automation; ELRS not supported by EmuFlight.'
-    echo '// notice - please manually add all SPI based receiver definitions. complexity for these is currently beyond scope of automation.' >> ${hFile}
-    echo '//          e.g. USE_RX_CC2500_*, RX_CC2500_SPI_*' >> ${hFile}
-    echo '//          e.g. FLYSKY_2A_CHANNEL_COUNT, USE_RX_FLYSKY_SPI_LED, RX_FLYSKY_SPI_LED_PIN' >> ${hFile}
     echo '' >> ${hFile}
 else
     featureRX='FEATURE_RX_SERIAL'
@@ -1047,9 +1031,6 @@ do
     translate "I2C${i}_SCL_PIN" $config "#define I2C${i}_SCL $(grep "I2C${i}_SCL_PIN" $config | awk '{print          $3}')" ${hFile}
     translate "I2C${i}_SDA_PIN" $config "#define I2C${i}_SDA $(grep "I2C${i}_SDA_PIN" $config | awk '{print          $3}')" ${hFile}
 done
-echo '// notice - this file was programmatically generated and likely needs MAG/BARO manually added, finished, or verified.' >> ${hFile}
-echo '//           e.g. USE_BARO_xxxxxx, USE_BARO_SPI_xxxxxx, DEFAULT_BARO_SPI_xxxxxx, xxxxxx_CS_PIN, xxxxxx_SPI_INSTANCE' >> ${hFile}
-echo '//           e.g. BMP280_CS_PIN and BMP280_SPI_INSTANCE instead of BARO_CS_PIN and BARO_SPI_INSTANCE' >> ${hFile}
 echo '' >> ${hFile}
 
 ## flash
@@ -1118,7 +1099,6 @@ grep "DEFAULT_VOLTAGE_METER_SOURCE" $config >> ${hFile}
 grep "DEFAULT_CURRENT_METER_SOURCE" $config >> ${hFile}
 grep DEFAULT_CURRENT_METER_SCALE $config >> ${hFile}
 grep ADC_INSTANCE $config >> ${hFile}
-echo '// notice - DMA conversion were programmatically generated and may be incomplete.' >> ${hFile}
 echo '' >> ${hFile}
 
 ## dshot
@@ -1153,7 +1133,6 @@ if [[ $(grep BUTTON_[AB] $config) ]] ; then
     echo '' >> ${hFile}
 fi
 
-echo '// notice - this file was programmatically generated and may not have accounted for any config instance of "#define TLM_INVERTED ON", etc.' >> ${hFile}
 echo '' >> ${hFile}
 
 # port masks
@@ -1189,8 +1168,6 @@ echo "building static default FEATURES"
 echo " - please modify as fit."
 echo "#define DEFAULT_FEATURES       (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_AIRMODE | ${featureRX})" >> ${hFile}
 echo "#define DEFAULT_RX_FEATURE     ${featureRX}" >> ${hFile}
-echo '// notice - potentially incomplete; may need additional DEFAULT_FEATURES; e.g. FEATURE_SOFTSERIAL | FEATURE_RX_SPI' >> ${hFile}
-echo '// notice - may need "#define DEFAULT_RX_FEATURE, SERIALRX_PROVIDER' >> ${hFile}
 echo '' >> ${hFile}
 
 # used timers
@@ -1208,7 +1185,6 @@ done
 echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep -c 'TIMER_PIN_MAP(' ${config} )" >> ${hFile}
 # to do: logic
 echo "#define USED_TIMERS (${usedTimers})" >> ${hFile}
-echo '// notice - USED_TIMERS were programmatically generated from unified-target and may be incomplete.' >> ${hFile}
 echo '' >> ${hFile}
 
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${hFile}
