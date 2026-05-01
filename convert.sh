@@ -12,9 +12,8 @@ if [[ ! $# -eq 2 ]]  2>/dev/null; then
     echo "   Ex: ${0##*/} TURC-TUNERCF405 ./"
     echo "   Ex: ${0##*/} DIAT-MAMBAF722_2022B ../EmuFlight/src/main/target/"
     echo ""
-    echo "note: Target definitions will be downloaded from"
-    echo "      https://github.com/betaflight/config/"
-    echo "      and https://github.com/betaflight/unified-targets/"
+    echo "note: config.h downloaded from https://github.com/betaflight/config/"
+    echo "      Timer/DMA resolved via local lookup tables in lookup/ (no unified-targets)."
     exit
 fi
 
@@ -102,13 +101,41 @@ mkdir ${resources} 2> /dev/null
 
 echo "downloading..."
 wget -c -N -nv -P ${resources} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h" || { echo "download failed. aborting." ; rm -rf ${dest} ; exit 1 ; }
-wget -c -N -nv -P ${resources} "https://github.com/betaflight/unified-targets/raw/master/configs/default/${1}.config" || { echo "download failed. aborting." ; rm -r ${dest} ; exit 1 ; }
 
 config="${resources}/config.h"
-unified="${resources}/${1}.config"
 
 echo "config.h: ${config}"
-echo "unified: ${unified}"
+
+# Detect MCU family and load timer hardware lookup table
+scriptDir="$(cd "$(dirname "$0")" && pwd)"
+mcu=$(grep -m1 'FC_TARGET_MCU' "$config" | awk '{print $3}')
+echo "MCU: ${mcu}"
+case "${mcu}" in
+    STM32F4*|STM32F405*|STM32F446*)  timerHwTsv="${scriptDir}/lookup/f4_timer_hw.tsv" ;;
+    STM32F7*|STM32F7x2*|STM32F745*|STM32F765*) timerHwTsv="${scriptDir}/lookup/f7_timer_hw.tsv" ;;
+    STM32H7*) timerHwTsv="${scriptDir}/lookup/h7_timer_hw.tsv" ;;
+    *) timerHwTsv="${scriptDir}/lookup/f7_timer_hw.tsv" ; echo 'notice: unknown MCU, defaulting to F7 timer table' ;;
+esac
+echo "timer table: ${timerHwTsv}"
+
+# Load timer hw lookup table into associative array: key=PIN_occurrence, value=TIMx:CHy
+declare -A timerLookup
+while IFS=$'\t' read -r pin occ tim ch; do
+    [[ "$pin" == '#'* || -z "$pin" ]] && continue
+    timerLookup["${pin}_${occ}"]="${tim}:${ch}"
+done < "${timerHwTsv}"
+
+# Load motor pin defines from config.h into associative array: key=pin, value=motorN
+declare -A motorPins
+for n in 1 2 3 4 5 6 7 8; do
+    mp=$(grep -m1 "MOTOR${n}_PIN" "$config" | awk '{print $3}')
+    [[ -n "$mp" ]] && motorPins["${mp}"]="${n}"
+done
+
+# Load peripheral pin defines from config.h
+ppmPin=$(grep -m1 'PPM_PIN\b' "$config" | awk '{print $3}')
+ledPin=$(grep -m1 'LED_STRIP_PIN\b' "$config" | awk '{print $3}')
+camPin=$(grep -m1 'CAMERA_CONTROL_PIN\b' "$config" | awk '{print $3}')
 
 mkFile="${dest}/target.mk"
 cFile="${dest}/target.c"
@@ -391,42 +418,33 @@ echo '#include "drivers/timer.h"' >> ${cFile}
 echo '#include "drivers/timer_def.h"' >> ${cFile}
 echo '' >> ${cFile}
 
-# DEF_TIM
+# DEF_TIM (from TIMER_PIN_MAP in config.h + lookup tables)
 echo 'building DEF_TIM'
-pinArray=($(grep "TIM[0-9]* CH" $unified | awk -F' ' '{print $3}' | sed s/://)) #col 3 contains colon to be stripped
-timerArray=($(grep "TIM[0-9]* CH" $unified | awk -F' ' '{print $4}'))
-channelArray=($(grep "TIM[0-9]* CH" $unified | awk -F' ' '{print $5}'))
-pinCount=${#pinArray[@]}
-timerCount=${#timerArray[@]}
-channelCount=${#channelArray[@]}
-# debug to screen
-#echo "pinCount: $pinCount"
-echo "timerCount: $timerCount"
-#echo "channelCount: $channelCount"
 
-#tranlate pin syntax
-for (( i = 0; i <= $pinCount-1; i++ ))
-do
-    # specialized 0-trim
-    convertedPinArray[$i]="P$(echo ${pinArray[$i]} | sed -E 's/^([A-Z])0?([0-9]+)/\1\2/')"
-    # debug to screen
-    #echo "pin: ${pinArray[$i]} (${convertedPinArray[$i]}) timer: ${timerArray[$i]} channel: ${channelArray[$i]}"
+# Parse TIMER_PIN_MAP entries: TIMER_PIN_MAP(idx, PIN, occurrence, dmaopt)
+# Store as parallel arrays: tpmPin[], tpmOcc[], tpmDma[]
+tpmPin=()
+tpmOcc=()
+tpmDma=()
+# Extract continuation lines of TIMER_PIN_MAPPING into one stream, then parse each TIMER_PIN_MAP()
+while IFS= read -r mapline; do
+    pin=$(echo  "$mapline" | sed 's/.*TIMER_PIN_MAP([^,]*, *\([A-Z][A-Z0-9]*\).*/\1/')
+    occ=$(echo  "$mapline" | sed 's/.*TIMER_PIN_MAP([^,]*, *[^,]*, *\([0-9]*\).*/\1/')
+    dopt=$(echo "$mapline" | sed 's/.*TIMER_PIN_MAP([^,]*, *[^,]*, *[^,]*, *\(-\?[0-9]*\).*/\1/')
+    tpmPin+=("$pin")
+    tpmOcc+=("$occ")
+    tpmDma+=("$dopt")
+done < <(grep 'TIMER_PIN_MAP(' "$config")
+
+tpmCount=${#tpmPin[@]}
+echo "timerCount: $tpmCount"
+
+# Derive motor count from config.h motor pin defines
+motorsCount=0
+for n in 1 2 3 4 5 6 7 8; do
+    [[ -n "$(grep -m1 "MOTOR${n}_PIN" "$config")" ]] && motorsCount=$n
 done
-convertedPinArray=("${convertedPinArray[@]}")
-convertedPinCount=${#channelArray[@]}
-# debug to screen
-#echo "convertedPinCountCount: $convertedPinCount"
-
-# debug to screen
-# grep 'dma pin ' $unified
-
-motorsArray=($(grep "resource MOTOR " $unified | awk -F' ' '{print $3}'))
-motorsPINArray=($(grep "resource MOTOR " $unified | awk -F' ' '{print $4}'))
-motorsCount=${#motorsArray[@]}
-motorsPINCount=${#motorsPINArray[@]}
-# debug to screen
 echo "motorsCount: $motorsCount"
-#echo "motorsPINCount: $motorsPINCount"
 
 # EmuF TIM_USE_ options:
 # TIM_USE_ANY
@@ -439,99 +457,54 @@ echo "motorsCount: $motorsCount"
 # TIM_USE_SERVO
 # TIM_USE_TRANSPONDER
 
-# above was data reading, so now perform output
+# Emit DEF_TIM entries from TIMER_PIN_MAP + lookup tables
 echo 'const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {' >> ${cFile}
-for (( i = 1; i <= $motorsCount; i++ ))
-do
-    echo "building DEF_TIM for motor $i : ${motorsPINArray[$i-1]}"
-    timer=""
-    channel=""
-    dma=""
-    for (( j = 0; j <= $pinCount-1; j++ )) ; do
-        # match motor pin/timer/chan/dma
-        # debug to screen
-        #echo "motor $i ${motorsPINArray[$i-1]} (${convertedPinArray[$j]})" #motors[0] is motorNumber1
-        #echo "${motorsPINArray[$i-1]} == ${pinArray[$j]} ?? >> ${timerArray[$j]} & ${channelArray[$j]}"
-        if [[ "${motorsPINArray[$i-1]}" == "${pinArray[$j]}" ]] ; then
-            # debug to screen
-            #echo "found ^"
-            timer="${timerArray[$j]}"
-            channel="${channelArray[$j]}"
-            dma=$(grep "dma pin ${motorsPINArray[$i-1]}" $unified | awk -F' ' '{print $4}')
-            if [ -z "$dma" ] ; then
-                echo ' - error: no associated dma value found. assuming 0. please repair if necessary.'
-                comment+='; dma 0 assumed, please verify'
-                dma="0"
-            fi
-            break # stop at motor ${j}
-        fi
-    done;
-    echo "    DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$j]}, TIM_USE_MOTOR, 0, ${dma}), // motor ${i}" >> ${cFile}
-    # debug to screen
-    #echo "    DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$j]}, TIM_USE_MOTOR, 0, ${dma}), // motor ${i}"
+for (( i = 0; i < tpmCount; i++ )); do
+    pin="${tpmPin[$i]}"
+    occ="${tpmOcc[$i]}"
+    dopt="${tpmDma[$i]}"
 
-    # remove pin $j (motor $i) we dont need it anymore (syntax: unset 'array[x]')
-    unset 'pinArray[j]' 
-    unset 'timerArray[j]'
-    unset 'channelArray[j]'
-    unset 'convertedPinArray[j]'
-done
+    # Look up TIM + CH via lookup table
+    timch="${timerLookup[${pin}_${occ}]}"
+    if [[ -z "$timch" ]]; then
+        echo " - notice: no timer lookup for ${pin} occurrence ${occ}; using TIM_USE_ANY"
+        timchOut="UNKNOWN_TIM, UNKNOWN_CH"
+    else
+        timchOut="${timch//:/, }"
+    fi
 
-#compact arrays after unsets / very important
-pinArray=("${pinArray[@]}")
-timerArray=("${timerArray[@]}")
-channelArray=("${channelArray[@]}")
-convertedPinArray=("${convertedPinArray[@]}")
-#new array sizes
-pinCount=${#pinArray[@]}
-timerCount=${#timerArray[@]}
-channelCount=${#channelArray[@]}
-convertedPinCount=${#channelArray[@]}
-# debug to screen
-#echo "remaining pinCount: $pinCount"
-echo "remaining timerCount: $timerCount"
-#echo "remaining channelCount: $channelCount"
-#echo "remaining convertedPinCountCount: $convertedPinCount"
-
-# build remaining non-motor timers
-for (( i = 0; i <= $pinCount-1; i++ ))
-do
-    echo "building DEF_TIM for pin ${pinArray[$i]} (${convertedPinArray[$i]})"
-    timer="${timerArray[$i]}"
-    channel="${channelArray[$i]}"
-    dma=$(grep "dma pin ${pinArray[$i]}" $unified | awk -F' ' '{print $4}')
-    ppm=$(grep "${pinArray[$i]}" $unified | grep PPM)
-    led=$(grep "${pinArray[$i]}" $unified | grep LED)
-    cam=$(grep "${pinArray[$i]}" $unified | grep CAMERA)
-    baro=$(grep "${pinArray[$i]}" $unified | grep BARO)
-    pwm=$(grep "${pinArray[$i]}" $unified | grep PWM)
-    if [[ $ppm ]] ; then
+    # Determine TIM_USE from pin role defines in config.h
+    comment=""
+    timUse="TIM_USE_ANY"
+    if [[ -n "${motorPins[$pin]+_}" ]]; then
+        motorN="${motorPins[$pin]}"
+        timUse="TIM_USE_MOTOR"
+        comment="motor ${motorN}"
+        echo "building DEF_TIM for motor ${motorN} : ${pin}"
+    elif [[ -n "$ppmPin" && "$pin" == "$ppmPin" ]]; then
         timUse="TIM_USE_PPM"
-        comment="ppm $(grep -m 1 "PPM_PIN.*${convertedPinArray[$i]}" $config | awk -F' ' '{print $2}')"
-    elif [[ $led ]] ; then
+        comment="ppm"
+        echo "building DEF_TIM for ppm : ${pin}"
+    elif [[ -n "$ledPin" && "$pin" == "$ledPin" ]]; then
         timUse="TIM_USE_LED"
-        comment="led"
-    elif [[ $cam ]] ; then
+        comment="led strip"
+        echo "building DEF_TIM for led : ${pin}"
+    elif [[ -n "$camPin" && "$pin" == "$camPin" ]]; then
         timUse="TIM_USE_ANY"
         comment="cam ctrl"
-    elif [[ $baro ]] ; then
-        timUse="TIM_USE_ANY"
-        comment="baro"
-    elif [[ $pwm ]] ; then
-        timUse="TIM_USE_PWM"
-        comment="pwm $(grep -m 1 "PWM[1-9]_PIN.*${convertedPinArray[$i]}" $config | awk -F' ' '{print $2}')"
+        echo "building DEF_TIM for cam : ${pin}"
     else
-        timUse="TIM_USE_ANY"
         comment="could not determine TIM_USE_xxxxx - please check"
+        echo "building DEF_TIM for pin : ${pin} (role unknown)"
     fi
-    if [ -z "$dma" ] ; then
-        echo ' - error: no associated dma value found. assuming 0. please repair if necessary.'
-        comment+='; dma 0 assumed, please verify'
-        dma="0"
+
+    # dmaopt -1 means no DMA (e.g. input capture only)
+    if [[ "$dopt" == "-1" ]]; then
+        dopt="0"
+        comment+="; dma -1 in config (input only)"
     fi
-    echo "    DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$i]}, ${timUse}, 0, ${dma}), // ${comment}" >> ${cFile}
-    # debug to screen
-    #echo "    DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$i]}, ${timUse}, 0, ${dma}), // ${comment}"
+
+    echo "    DEF_TIM(${timchOut}, ${pin}, ${timUse}, 0, ${dopt}), // ${comment}" >> ${cFile}
 done
 echo '};' >> ${cFile}
 
@@ -558,12 +531,10 @@ grep "MOTOR[[:digit:]]\+_PIN" $config | xargs -d'\n' --replace echo "{}" >> ${tF
 echo '' >> ${tFile}
 grep TIMER_PIN_MAP $config | xargs -d'\n' --replace echo "{}" >> ${tFile}
 echo '' >> ${tFile}
-echo '// unified timers' >> ${tFile}
-echo '# timer' >> ${tFile}
-grep -A1 'timer ' $unified | xargs -d'\n' --replace echo "{}" >> ${tFile}
-echo '' >> ${tFile}
-grep -A1 'dma ADC ' $unified | xargs -d'\n' --replace echo "{}" >> ${tFile}
-grep -A1 'dma pin ' $unified | xargs -d'\n' --replace echo "{}" >> ${tFile}
+echo '// TIMER_PIN_MAP from config.h' >> ${tFile}
+echo '// format: TIMER_PIN_MAP(index, pin, occurrence, dmaopt)' >> ${tFile}
+echo '// occurrence selects which timer from the MCU timer table (see lookup/*.tsv)' >> ${tFile}
+grep 'TIMER_PIN_MAP(' "$config" | sed 's/^/    /' >> ${tFile}
 
 # create target.h file
 echo "building ${hFile}"
@@ -1047,9 +1018,8 @@ if [[ $(grep USE_SDCARD $config) ]] ; then
     echo "#define USE_SDCARD_SDIO" >> ${hFile}
     grep SDCARD_SPI_CS_PIN $config >> ${hFile}
     grep SDCARD_SPI_INSTANCE $config >> ${hFile}
-    spiMosi=$(grep '# SPI_MOSI' ${unified})
-    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL          X            //${spiMosi}" >> ${hFile}
-    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL_TX       DMAx_StreamX //${spiMosi}" >> ${hFile}
+    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL          X            // please verify" >> ${hFile}
+    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL_TX       DMAx_StreamX // please verify" >> ${hFile}
     echo "//notice - other sdcard defines maybe needed (rare?): SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX, SDCARD_DMA_CLK, SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG" >> ${hFile}
     translate "BLACKBOX_DEVICE_SDCARD" $config "#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT" ${hFile}
     echo "#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4    //notice - needs validation. these are hardware dependent. known options: 2, 4, 8." >> ${hFile}
@@ -1078,20 +1048,19 @@ translate "ADC_VBAT_PIN" $config "#define VBAT_ADC_PIN $(grep "ADC_VBAT_PIN" $co
 translate "ADC_CURR_PIN" $config "#define CURRENT_METER_ADC_PIN $(grep "ADC_CURR_PIN" $config | awk '{print          $3}')" ${hFile}
 translate "ADC_RSSI_PIN" $config "#define RSSI_ADC_PIN $(grep "ADC_RSSI_PIN" $config | awk '{print          $3}')" ${hFile}
 grep "ADC[[:digit:]]_DMA_OPT" $config >> ${hFile}
+# Resolve ADCn_DMA_OPT -> DMA stream using lookup table
 for i in {1..5}
 do
-    #old commented out
-    #translate "ADC${i}_DMA_OPT" $config "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - DMA2_Stream0 likely wrong - found in unified-target." ${hFile}
-    #translate "ADC ${i}: DMA" $unified "// $(grep "ADC ${i}: DMA" $unified) // notice - use this for above define." ${hFile}
-    # format: # ADC 1: DMA2 Stream 0 Channel 0
-    adcDmaString=$(grep "ADC ${i}: DMA" $unified)
-    if [ ! -z "$adcDmaString" ] ; then
-        dma=$(echo "$adcDmaString" | awk -F'DMA' '{print $2}' | awk -F' ' '{print $1}')
-        stream=$(echo "$adcDmaString" | awk -F'Stream' '{print $2}' | awk -F' ' '{print $1}')
-        echo "#define ADC${i}_DMA_STREAM DMA${dma}_Stream${stream} //${adcDmaString}" >> ${hFile}
-        # debug to screen
-        #echo "$adcDmaString"
-        #echo "#define ADC${i}_DMA_STREAM DMA${dma}_Stream${stream} //${adcDmaString}"
+    dmaOpt=$(grep -m1 "ADC${i}_DMA_OPT" "$config" | awk '{print $3}')
+    if [[ -n "$dmaOpt" ]]; then
+        adcLookup=$(grep -m1 "^${i}	${dmaOpt}	" "${scriptDir}/lookup/f4f7_dma_adc.tsv" 2>/dev/null)
+        if [[ -n "$adcLookup" ]]; then
+            ctrl=$(echo "$adcLookup" | awk '{print $3}')
+            stream=$(echo "$adcLookup" | awk '{print $4}')
+            echo "#define ADC${i}_DMA_STREAM DMA${ctrl}_Stream${stream} // ADC${i} opt${dmaOpt}" >> ${hFile}
+        else
+            echo "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - ADC${i} opt${dmaOpt} not resolved; please verify" >> ${hFile}
+        fi
     fi
 done
 echo ' - please verify ADC DMA Streams.'
@@ -1170,17 +1139,19 @@ echo "#define DEFAULT_FEATURES       (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_
 echo "#define DEFAULT_RX_FEATURE     ${featureRX}" >> ${hFile}
 echo '' >> ${hFile}
 
-# used timers
+# used timers: derive from TIMER_PIN_MAP lookup results
 echo "building USED_TIMERS"
+declare -A usedTimNums
+for (( i = 0; i < tpmCount; i++ )); do
+    pin="${tpmPin[$i]}"; occ="${tpmOcc[$i]}"
+    timch="${timerLookup[${pin}_${occ}]}"
+    [[ -n "$timch" ]] && usedTimNums["${timch%%:*}"]=1
+done
 usedTimers=''
-for i in {1..20}
-do
-    if [[ $(grep "TIM${i} CH" $unified) ]] ; then
-        if [[ $usedTimers != '' ]] ; then
-            usedTimers+="|"
-        fi
-        usedTimers+=" TIM_N(${i}) "
-    fi
+for t in $(echo "${!usedTimNums[@]}" | tr ' ' '\n' | sort -V); do
+    num="${t#TIM}"
+    [[ $usedTimers != '' ]] && usedTimers+="|"
+    usedTimers+=" TIM_N(${num}) "
 done
 echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep -c 'TIMER_PIN_MAP(' ${config} )" >> ${hFile}
 # to do: logic
