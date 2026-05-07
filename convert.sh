@@ -371,7 +371,6 @@ echo 'drivers/max7456.c \' >> ${mkFile}
 
 echo '' >> ${mkFile}
 echo '# notice - this file was programmatically generated and may be incomplete.' >> ${mkFile}
-echo '# eg: flash, compass, barometer, vtx6705, ledstrip, pinio, etc.   especially mag/baro' >> ${mkFile}
 echo '' >> ${mkFile}
 echo "# ${generatedMessage}" >> ${mkFile}
 echo "# ${generatedSHA}" >> ${mkFile}
@@ -535,11 +534,6 @@ do
     #echo "    DEF_TIM(${timer}, ${channel}, ${convertedPinArray[$i]}, ${timUse}, 0, ${dma}), // ${comment}"
 done
 echo '};' >> ${cFile}
-echo '' >> ${cFile}
-
-echo '// notice - DEF_TIM was programmatically generated and may be wrong or incomplete.' >> ${cFile}
-echo '//          please reference associated unified-target.' >> ${cFile}
-echo '//          some timers may associate with multiple pins. e.g baro/flash' >> ${cFile}
 
 echo '' >> ${cFile}
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${cFile}
@@ -603,9 +597,6 @@ echo '#define USE_VCP' >> ${hFile}
 if [[ $(grep USE_FLASH $config) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
     echo '#define USE_FLASH_M25P16    // 16MB Micron M25P16 driver; drives all unless QSPI' >> ${hFile}
-    echo '//#define USE_FLASH_W25M    // 1Gb NAND flash support' >> ${hFile}
-    echo '//#define USE_FLASH_W25M512 // 16, 32, 64 or 128MB Winbond stacked die support' >> ${hFile}
-    echo '//#define USE_FLASH_W25Q    // 512Kb (256Kb x 2 stacked) NOR flash support' >> ${hFile}
 fi
 if [[ $(grep USE_MAX7456 $config) ]] ; then
     echo '#define USE_OSD' >> ${hFile}
@@ -678,7 +669,7 @@ fi
 
 G1_csPin=$(grep -w GYRO_1_CS_PIN $config | awk -F' ' '{print $3}')
 G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $config | awk -F' ' '{print $3}')
-G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}')
+G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}' | sed 's/^SPI\([1-4]\)$/SPIDEV_\1/')
 
 if [[ ! $(grep "GYRO_2_" $config) ]] ; then
     if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
@@ -700,7 +691,7 @@ if [[ $(grep "GYRO_2_" $config) ]] ; then # only define GYRO_1 when GYRO_2 exist
     echo "#define GYRO_1_ALIGN         ${G1_align}" >> ${hFile}
     grep GYRO_1_CS_PIN $config >> ${hFile}
     grep GYRO_1_EXTI_PIN $config >> ${hFile}
-    grep GYRO_1_SPI_INSTANCE $config >> ${hFile}
+    grep GYRO_1_SPI_INSTANCE $config | sed 's/_SPI_INSTANCE/_SPI_BUS/; s/\bSPI\([1-4]\)\b/SPIDEV_\1/g' >> ${hFile}
     echo ' - defined GYRO_1'
     echo '' >> ${hFile}
 fi
@@ -723,7 +714,7 @@ if [[ $(grep "GYRO_2_" $config) ]] ; then
     echo "#define GYRO_2_ALIGN         ${G2_align}" >> ${hFile}
     grep GYRO_2_CS_PIN $config >> ${hFile}
     grep GYRO_2_EXTI_PIN $config >> ${hFile}
-    grep GYRO_2_SPI_INSTANCE $config >> ${hFile}
+    grep GYRO_2_SPI_INSTANCE $config | sed 's/_SPI_INSTANCE/_SPI_BUS/; s/\bSPI\([1-4]\)\b/SPIDEV_\1/g' >> ${hFile}
     echo ' - defined GYRO_2'
     echo '' >> ${hFile}
 else #individual gyro/all defines
@@ -736,7 +727,7 @@ else #individual gyro/all defines
             echo "#define ACC_MPU9250_ALIGN        ${G1_align}" >> $hFile
             echo "#define GYRO_MPU9250_ALIGN       ${G1_align}" >> $hFile
             echo "#define MPU9250_CS_PIN           ${G1_csPin}" >> $hFile
-            echo "#define MPU9250_SPI_INSTANCE     ${G1_spi}"  >> $hFile
+            echo "#define MPU9250_SPI_BUS          ${G1_spi}"  >> $hFile
             echo ' - defined MPU9250'
         fi
         echo '' >> ${hFile}
@@ -751,7 +742,7 @@ else #individual gyro/all defines
             echo "#define ACC_MPU6000_ALIGN        ${G1_align}" >> $hFile
             echo "#define GYRO_MPU6000_ALIGN       ${G1_align}" >> $hFile
             echo "#define MPU6000_CS_PIN           ${G1_csPin}" >> $hFile
-            echo "#define MPU6000_SPI_INSTANCE     ${G1_spi}"  >> $hFile
+            echo "#define MPU6000_SPI_BUS          ${G1_spi}"  >> $hFile
             echo ' - defined MPU6000'
         fi
         echo '' >> ${hFile}
@@ -773,7 +764,7 @@ else #individual gyro/all defines
             echo "#define ACC_MPU6500_ALIGN        ${G1_align}" >> $hFile
             echo "#define GYRO_MPU6500_ALIGN       ${G1_align}" >> $hFile
             echo "#define MPU6500_CS_PIN           ${G1_csPin}" >> $hFile
-            echo "#define MPU6500_SPI_INSTANCE     ${G1_spi}"  >> $hFile
+            echo "#define MPU6500_SPI_BUS          ${G1_spi}"  >> $hFile
             echo ' - defined MPU6500 (maybe ICM2060x)'
         fi
         echo '' >> ${hFile}
@@ -788,7 +779,7 @@ else #individual gyro/all defines
             echo "#define ACC_ICM20689_ALIGN       ${G1_align}" >> $hFile
             echo "#define GYRO_ICM20689_ALIGN      ${G1_align}" >> $hFile
             echo "#define ICM20689_CS_PIN          ${G1_csPin}" >> $hFile
-            echo "#define ICM20689_SPI_INSTANCE    ${G1_spi}"  >> $hFile
+            echo "#define ICM20689_SPI_BUS         ${G1_spi}"  >> $hFile
             echo ' - defined ICM20689'
         fi
         echo '' >> ${hFile}
@@ -803,7 +794,7 @@ else #individual gyro/all defines
             echo "#define ACC_ICM42688P_ALIGN      ${G1_align}" >> $hFile
             echo "#define GYRO_ICM42688P_ALIGN     ${G1_align}" >> $hFile
             echo "#define ICM42688P_CS_PIN         ${G1_csPin}" >> $hFile
-            echo "#define ICM42688P_SPI_INSTANCE   ${G1_spi}"  >> $hFile
+            echo "#define ICM42688P_SPI_BUS        ${G1_spi}"  >> $hFile
             echo ' - defined ICM42688P'
         fi
         echo '' >> ${hFile}
@@ -819,7 +810,7 @@ else #individual gyro/all defines
             echo "#define ACC_BMI270_ALIGN         ${G1_align}" >> $hFile
             echo "#define GYRO_BMI270_ALIGN        ${G1_align}" >> $hFile
             echo "#define BMI270_CS_PIN            ${G1_csPin}" >> $hFile
-            echo "#define BMI270_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+            echo "#define BMI270_SPI_BUS           ${G1_spi}"  >> $hFile
             echo ' - defined BMI270'
         fi
         echo '' >> ${hFile}
@@ -856,10 +847,6 @@ grep "INVERTER_PIN_UART" $config >> ${hFile}
 grep "USART" $config >> ${hFile}
 totalserial=$(expr $hardserial + $softserial)
 echo "#define SERIAL_PORT_COUNT $(expr $vcpserial + $totalserial)" >> ${hFile}
-echo '// notice - UART/USART were programmatically generated - please verify UART/USART.' >> ${hFile}
-echo '// notice - may need "#define SERIALRX_UART SERIAL_PORT_USART_"' >> ${hFile}
-echo '// notice - for any iterim non-defined TX/RX _PIN, may need to define as NONE and also include any USE_UARTx involved.' >> ${hFile}
-echo '// notice - please verify serial count. VCP+UARTs+SOFTSERIALs (uncertain about skipped UARTs and USARTs)' >> ${hFile}
 echo '' >> ${hFile}
 
 # BF config.h:
@@ -944,9 +931,6 @@ if [[ $(grep 'RX_SPI_' $config) ]] ; then
     fi
 
     echo 'skipping some SPI based RX. please define all RX_SPI_ manually; too complex for automation; ELRS not supported by EmuFlight.'
-    echo '// notice - please manually add all SPI based receiver definitions. complexity for these is currently beyond scope of automation.' >> ${hFile}
-    echo '//          e.g. USE_RX_CC2500_*, RX_CC2500_SPI_*' >> ${hFile}
-    echo '//          e.g. FLYSKY_2A_CHANNEL_COUNT, USE_RX_FLYSKY_SPI_LED, RX_FLYSKY_SPI_LED_PIN' >> ${hFile}
     echo '' >> ${hFile}
 else
     featureRX='FEATURE_RX_SERIAL'
@@ -1047,9 +1031,6 @@ do
     translate "I2C${i}_SCL_PIN" $config "#define I2C${i}_SCL $(grep "I2C${i}_SCL_PIN" $config | awk '{print          $3}')" ${hFile}
     translate "I2C${i}_SDA_PIN" $config "#define I2C${i}_SDA $(grep "I2C${i}_SDA_PIN" $config | awk '{print          $3}')" ${hFile}
 done
-echo '// notice - this file was programmatically generated and likely needs MAG/BARO manually added, finished, or verified.' >> ${hFile}
-echo '//           e.g. USE_BARO_xxxxxx, USE_BARO_SPI_xxxxxx, DEFAULT_BARO_SPI_xxxxxx, xxxxxx_CS_PIN, xxxxxx_SPI_INSTANCE' >> ${hFile}
-echo '//           e.g. BMP280_CS_PIN and BMP280_SPI_INSTANCE instead of BARO_CS_PIN and BARO_SPI_INSTANCE' >> ${hFile}
 echo '' >> ${hFile}
 
 ## flash
@@ -1118,7 +1099,6 @@ grep "DEFAULT_VOLTAGE_METER_SOURCE" $config >> ${hFile}
 grep "DEFAULT_CURRENT_METER_SOURCE" $config >> ${hFile}
 grep DEFAULT_CURRENT_METER_SCALE $config >> ${hFile}
 grep ADC_INSTANCE $config >> ${hFile}
-echo '// notice - DMA conversion were programmatically generated and may be incomplete.' >> ${hFile}
 echo '' >> ${hFile}
 
 ## dshot
@@ -1153,7 +1133,6 @@ if [[ $(grep BUTTON_[AB] $config) ]] ; then
     echo '' >> ${hFile}
 fi
 
-echo '// notice - this file was programmatically generated and may not have accounted for any config instance of "#define TLM_INVERTED ON", etc.' >> ${hFile}
 echo '' >> ${hFile}
 
 # port masks
@@ -1189,8 +1168,6 @@ echo "building static default FEATURES"
 echo " - please modify as fit."
 echo "#define DEFAULT_FEATURES       (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_AIRMODE | ${featureRX})" >> ${hFile}
 echo "#define DEFAULT_RX_FEATURE     ${featureRX}" >> ${hFile}
-echo '// notice - potentially incomplete; may need additional DEFAULT_FEATURES; e.g. FEATURE_SOFTSERIAL | FEATURE_RX_SPI' >> ${hFile}
-echo '// notice - may need "#define DEFAULT_RX_FEATURE, SERIALRX_PROVIDER' >> ${hFile}
 echo '' >> ${hFile}
 
 # used timers
@@ -1208,7 +1185,6 @@ done
 echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep -c 'TIMER_PIN_MAP(' ${config} )" >> ${hFile}
 # to do: logic
 echo "#define USED_TIMERS (${usedTimers})" >> ${hFile}
-echo '// notice - USED_TIMERS were programmatically generated from unified-target and may be incomplete.' >> ${hFile}
 echo '' >> ${hFile}
 
 echo '// notice - this file was programmatically generated and may be incomplete.' >> ${hFile}
