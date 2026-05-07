@@ -640,7 +640,7 @@ fi
 
 G1_csPin=$(grep -w GYRO_1_CS_PIN $config | awk -F' ' '{print $3}')
 G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $config | awk -F' ' '{print $3}')
-G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}')
+G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}' | sed 's/^SPI\([1-4]\)$/SPIDEV_\1/')
 
 if [[ ! $(grep "GYRO_2_" $config) ]] ; then
     if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
@@ -662,7 +662,7 @@ if [[ $(grep "GYRO_2_" $config) ]] ; then # only define GYRO_1 when GYRO_2 exist
     echo "#define GYRO_1_ALIGN         ${G1_align}" >> ${hFile}
     grep GYRO_1_CS_PIN $config >> ${hFile}
     grep GYRO_1_EXTI_PIN $config >> ${hFile}
-    grep GYRO_1_SPI_INSTANCE $config >> ${hFile}
+    grep GYRO_1_SPI_INSTANCE $config | sed 's/_SPI_INSTANCE/_SPI_BUS/; s/\bSPI\([1-4]\)\b/SPIDEV_\1/g' >> ${hFile}
     echo ' - defined GYRO_1'
     echo '' >> ${hFile}
 fi
@@ -685,7 +685,7 @@ if [[ $(grep "GYRO_2_" $config) ]] ; then
     echo "#define GYRO_2_ALIGN         ${G2_align}" >> ${hFile}
     grep GYRO_2_CS_PIN $config >> ${hFile}
     grep GYRO_2_EXTI_PIN $config >> ${hFile}
-    grep GYRO_2_SPI_INSTANCE $config >> ${hFile}
+    grep GYRO_2_SPI_INSTANCE $config | sed 's/_SPI_INSTANCE/_SPI_BUS/; s/\bSPI\([1-4]\)\b/SPIDEV_\1/g' >> ${hFile}
     echo ' - defined GYRO_2'
     echo '' >> ${hFile}
 else #individual gyro/all defines
@@ -698,7 +698,7 @@ else #individual gyro/all defines
             echo "#define ACC_MPU9250_ALIGN        ${G1_align}" >> $hFile
             echo "#define GYRO_MPU9250_ALIGN       ${G1_align}" >> $hFile
             echo "#define MPU9250_CS_PIN           ${G1_csPin}" >> $hFile
-            echo "#define MPU9250_SPI_INSTANCE     ${G1_spi}"  >> $hFile
+            echo "#define MPU9250_SPI_BUS          ${G1_spi}"  >> $hFile
             echo ' - defined MPU9250'
         fi
         echo '' >> ${hFile}
@@ -713,7 +713,7 @@ else #individual gyro/all defines
             echo "#define ACC_MPU6000_ALIGN        ${G1_align}" >> $hFile
             echo "#define GYRO_MPU6000_ALIGN       ${G1_align}" >> $hFile
             echo "#define MPU6000_CS_PIN           ${G1_csPin}" >> $hFile
-            echo "#define MPU6000_SPI_INSTANCE     ${G1_spi}"  >> $hFile
+            echo "#define MPU6000_SPI_BUS          ${G1_spi}"  >> $hFile
             echo ' - defined MPU6000'
         fi
         echo '' >> ${hFile}
@@ -735,7 +735,7 @@ else #individual gyro/all defines
             echo "#define ACC_MPU6500_ALIGN        ${G1_align}" >> $hFile
             echo "#define GYRO_MPU6500_ALIGN       ${G1_align}" >> $hFile
             echo "#define MPU6500_CS_PIN           ${G1_csPin}" >> $hFile
-            echo "#define MPU6500_SPI_INSTANCE     ${G1_spi}"  >> $hFile
+            echo "#define MPU6500_SPI_BUS          ${G1_spi}"  >> $hFile
             echo ' - defined MPU6500 (maybe ICM2060x)'
         fi
         echo '' >> ${hFile}
@@ -750,7 +750,7 @@ else #individual gyro/all defines
             echo "#define ACC_ICM20689_ALIGN       ${G1_align}" >> $hFile
             echo "#define GYRO_ICM20689_ALIGN      ${G1_align}" >> $hFile
             echo "#define ICM20689_CS_PIN          ${G1_csPin}" >> $hFile
-            echo "#define ICM20689_SPI_INSTANCE    ${G1_spi}"  >> $hFile
+            echo "#define ICM20689_SPI_BUS         ${G1_spi}"  >> $hFile
             echo ' - defined ICM20689'
         fi
         echo '' >> ${hFile}
@@ -765,7 +765,7 @@ else #individual gyro/all defines
             echo "#define ACC_ICM42688P_ALIGN      ${G1_align}" >> $hFile
             echo "#define GYRO_ICM42688P_ALIGN     ${G1_align}" >> $hFile
             echo "#define ICM42688P_CS_PIN         ${G1_csPin}" >> $hFile
-            echo "#define ICM42688P_SPI_INSTANCE   ${G1_spi}"  >> $hFile
+            echo "#define ICM42688P_SPI_BUS        ${G1_spi}"  >> $hFile
             echo ' - defined ICM42688P'
         fi
         echo '' >> ${hFile}
@@ -781,7 +781,7 @@ else #individual gyro/all defines
             echo "#define ACC_BMI270_ALIGN         ${G1_align}" >> $hFile
             echo "#define GYRO_BMI270_ALIGN        ${G1_align}" >> $hFile
             echo "#define BMI270_CS_PIN            ${G1_csPin}" >> $hFile
-            echo "#define BMI270_SPI_INSTANCE      ${G1_spi}"  >> $hFile
+            echo "#define BMI270_SPI_BUS           ${G1_spi}"  >> $hFile
             echo ' - defined BMI270'
         fi
         echo '' >> ${hFile}
