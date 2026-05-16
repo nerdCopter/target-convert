@@ -113,6 +113,7 @@ echo "MCU: ${mcu}"
 case "${mcu}" in
     STM32F4*|STM32F405*|STM32F446*)  timerHwCsv="${scriptDir}/lookup/f4_timer_hw.csv" ;;
     STM32F7*|STM32F7x2*|STM32F745*|STM32F765*) timerHwCsv="${scriptDir}/lookup/f7_timer_hw.csv" ;;
+    STM32H7*) timerHwCsv="${scriptDir}/lookup/h7_timer_hw.csv" ;;
     *) timerHwCsv="${scriptDir}/lookup/f7_timer_hw.csv" ; echo 'notice: unknown MCU, defaulting to F7 timer table' ;;
 esac
 echo "timer table: ${timerHwCsv}"
@@ -236,8 +237,20 @@ elif [[ $(grep STM32F7X2 $config) ]]; then
 elif [[ $(grep STM32F745 $config) ]]; then
     echo 'F7X5XG_TARGETS += $(TARGET)' > ${mkFile}
     TBID="S745"
+elif [[ $(grep -E 'STM32H723|STM32H725' $config) ]]; then
+    echo 'H723_TARGETS   += $(TARGET)' > ${mkFile}
+    TBID="SH72"
+elif [[ $(grep STM32H730 $config) ]]; then
+    echo 'H730_TARGETS   += $(TARGET)' > ${mkFile}
+    TBID="S730"
+elif [[ $(grep STM32H743 $config) ]]; then
+    echo 'H743_TARGETS   += $(TARGET)' > ${mkFile}
+    TBID="SH74"
+elif [[ $(grep STM32H750 $config) ]]; then
+    echo 'H750_TARGETS   += $(TARGET)' > ${mkFile}
+    TBID="S750"
 else
-    echo ' - not an STM32F4 nor an STM32F7.'
+    echo ' - not an STM32F4, F7, or H7.'
     echo ' - aborting.'
     rm -r ${dest}
     exit
@@ -1130,16 +1143,17 @@ echo '' >> ${hFile}
 # port masks
 echo "building port masks"
 
-# Compute per-port bitmasks by scanning every P[A-H][0-9]{1,2} token in config.h.
+# Compute per-port bitmasks by scanning every P[A-K][0-9]{1,2} token in config.h.
 # Each bit N in TARGET_IO_PORTx represents pin N (0-15): (1 << N).
+# H7 uses ports up to K; F4/F7 typically use up to H. Unused ports are skipped.
 declare -A portMask
 while IFS= read -r pinToken; do
     port="${pinToken:1:1}"
     num="${pinToken:2}"
     portMask[$port]=$(( ${portMask[$port]:-0} | (1 << num) ))
-done < <(grep -oE '\bP[A-H][0-9]{1,2}\b' "$config" | sort -u)
+done < <(grep -oE '\bP[A-K][0-9]{1,2}\b' "$config" | sort -u)
 
-for port in A B C D E F G H; do
+for port in A B C D E F G H I J K; do
     mask="${portMask[$port]}"
     if [[ -n "$mask" && "$mask" -ne 0 ]]; then
         # Single-pin port (mask is a power of 2): emit exact BIT(n).
