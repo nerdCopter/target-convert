@@ -1105,31 +1105,23 @@ echo '' >> ${hFile}
 
 # port masks
 echo "building port masks"
-if [[ $(grep ' PA[0-9]' $config) ]]; then
-    echo '#define TARGET_IO_PORTA 0xffff' >> ${hFile}
-fi
-if [[ $(grep ' PB[0-9]' $config) ]]; then
-    echo '#define TARGET_IO_PORTB 0xffff' >> ${hFile}
-fi
-if [[ $(grep ' PB[0-9]' $config) ]]; then
-    echo '#define TARGET_IO_PORTC 0xffff' >> ${hFile}
-fi
-if [[ $(grep ' PD[0-9]' $config) ]]; then
-    echo '#define TARGET_IO_PORTD 0xffff' >> ${hFile}
-fi
-if [[ $(grep ' PE[0-9]' $config) ]]; then
-    echo '#define TARGET_IO_PORTE 0xffff' >> ${hFile}
-fi
-if [[ $(grep ' PF[0-9]' $config) ]]; then
-    echo '#define TARGET_IO_PORTF 0xffff' >> ${hFile}
-fi
-if [[ $(grep ' PG[0-9]' $config) ]]; then
-    echo '#define TARGET_IO_PORTG 0xffff' >> ${hFile}
-fi
-if [[ $(grep ' PH[0-9]' $config) ]]; then
-    echo '#define TARGET_IO_PORTH 0xffff' >> ${hFile}
-fi
-echo '// notice - masks were programmatically generated - please verify last port group for 0xffff or (BIT(2))' >> ${hFile}
+
+# Compute per-port bitmasks by scanning every P[A-H][0-9]{1,2} token in config.h.
+# Each bit N in TARGET_IO_PORTx represents pin N (0-15): (1 << N).
+declare -A portMask
+while IFS= read -r pinToken; do
+    port="${pinToken:1:1}"
+    num="${pinToken:2}"
+    portMask[$port]=$(( ${portMask[$port]:-0} | (1 << num) ))
+done < <(grep -oE '\bP[A-H][0-9]{1,2}\b' "$config" | sort -u)
+
+for port in A B C D E F G H; do
+    mask="${portMask[$port]}"
+    if [[ -n "$mask" && "$mask" -ne 0 ]]; then
+        printf '#define TARGET_IO_PORT%s 0x%04x\n' "$port" "$mask" >> "${hFile}"
+    fi
+done
+echo '// notice - port masks computed from pin usage in config.h' >> ${hFile}
 echo '' >> ${hFile}
 
 echo "building static default FEATURES"
