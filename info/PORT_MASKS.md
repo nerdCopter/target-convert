@@ -41,13 +41,14 @@ The Perl script `src/utils/def_generated.pl` generates `io_def_generated.h` at b
 
 ## How convert.sh computes masks
 
-1. Scans `config.h` for all `P[A-H][0-9]{1,2}` tokens
+1. Scans `config.h` for all `P[A-K][0-9]{1,2}` tokens (A–K covers H7)
 2. Groups by port letter, ORs `(1 << pin_number)` per port
 3. Power-of-2 check `(mask & (mask-1)) == 0` → single pin → emit `(BIT(n))`
 4. Otherwise emit `0xffff`
+5. Loops ports A–K; skips any port with zero mask (so unused H7 ports I/J/K don't appear on F4/F7 targets)
 
 ## Port letters by MCU family
 
 - F4, F7: ports A–H (some boards only use A–D or A–E)
-- H7: ports A–K (adds I, J, K) — needs extension when H7 support is added
+- H7: ports A–K (adds I, J, K) — supported
 - G4: ports A–G typically

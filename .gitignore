@@ -4,6 +4,8 @@
 # Includelist some files
 !.gitignore
 !README.md
+!CLAUDE.md
+!AGENTS.md
 !convert.sh
 !info/
 !info/*
