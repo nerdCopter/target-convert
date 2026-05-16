@@ -131,6 +131,13 @@ for n in 1 2 3 4 5 6 7 8; do
     [[ -n "$mp" ]] && motorPins["${mp}"]="${n}"
 done
 
+# Load servo pin defines from config.h into associative array: key=pin, value=servoN
+declare -A servoPins
+for n in 1 2 3 4; do
+    sp=$(grep -m1 "SERVO${n}_PIN" "$config" | awk '{print $3}')
+    [[ -n "$sp" ]] && servoPins["${sp}"]="${n}"
+done
+
 # Load peripheral pin defines from config.h
 ppmPin=$(grep -m1 'PPM_PIN\b' "$config" | awk '{print $3}')
 ledPin=$(grep -m1 'LED_STRIP_PIN\b' "$config" | awk '{print $3}')
@@ -140,6 +147,17 @@ mkFile="${dest}/target.mk"
 cFile="${dest}/target.c"
 hFile="${dest}/target.h"
 tFile="${resources}/timers.txt"
+
+resolvePinMacro() {
+    local tok="$1"
+    if [[ "$tok" =~ ^P[A-K][0-9]{1,2}$ ]]; then
+        echo "$tok"
+    else
+        local val
+        val=$(grep -m1 "^#define ${tok}[[:space:]]" "$config" | awk '{print $3}')
+        echo "${val:-$tok}"
+    fi
+}
 
 function translate () {
     local search="$1"
@@ -427,13 +445,14 @@ tpmOcc=()
 tpmDma=()
 # Extract continuation lines of TIMER_PIN_MAPPING into one stream, then parse each TIMER_PIN_MAP()
 while IFS= read -r mapline; do
-    pin=$(echo  "$mapline" | sed 's/.*TIMER_PIN_MAP([^,]*, *\([A-Z][A-Z0-9]*\).*/\1/')
+    rawPin=$(echo "$mapline" | sed 's/.*TIMER_PIN_MAP([^,]*, *\([A-Z][A-Z0-9_]*\).*/\1/')
+    pin=$(resolvePinMacro "$rawPin")
     occ=$(echo  "$mapline" | sed 's/.*TIMER_PIN_MAP([^,]*, *[^,]*, *\([0-9]*\).*/\1/')
     dopt=$(echo "$mapline" | sed 's/.*TIMER_PIN_MAP([^,]*, *[^,]*, *[^,]*, *\(-\?[0-9]*\).*/\1/')
     tpmPin+=("$pin")
     tpmOcc+=("$occ")
     tpmDma+=("$dopt")
-done < <(grep 'TIMER_PIN_MAP(' "$config")
+done < <(grep 'TIMER_PIN_MAP(' "$config" | grep -v '^\s*//')
 
 tpmCount=${#tpmPin[@]}
 echo "timerCount: $tpmCount"
@@ -480,6 +499,11 @@ for (( i = 0; i < tpmCount; i++ )); do
         timUse="TIM_USE_MOTOR"
         comment="motor ${motorN}"
         echo "building DEF_TIM for motor ${motorN} : ${pin}"
+    elif [[ -n "${servoPins[$pin]+_}" ]]; then
+        servoN="${servoPins[$pin]}"
+        timUse="TIM_USE_SERVO"
+        comment="servo ${servoN}"
+        echo "building DEF_TIM for servo ${servoN} : ${pin}"
     elif [[ -n "$ppmPin" && "$pin" == "$ppmPin" ]]; then
         timUse="TIM_USE_PPM"
         comment="ppm"
@@ -533,7 +557,7 @@ echo '' >> ${tFile}
 echo '// TIMER_PIN_MAP from config.h' >> ${tFile}
 echo '// format: TIMER_PIN_MAP(index, pin, occurrence, dmaopt)' >> ${tFile}
 echo '// occurrence selects which timer from the MCU timer table (see lookup/*.csv)' >> ${tFile}
-grep 'TIMER_PIN_MAP(' "$config" | sed 's/^/    /' >> ${tFile}
+grep 'TIMER_PIN_MAP(' "$config" | grep -v '^\s*//' | sed 's/^/    /' >> ${tFile}
 
 # create target.h file
 echo "building ${hFile}"
@@ -1151,7 +1175,7 @@ for t in $(echo "${!usedTimNums[@]}" | tr ' ' '\n' | sort -V); do
     [[ $usedTimers != '' ]] && usedTimers+="|"
     usedTimers+=" TIM_N(${num}) "
 done
-echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep -c 'TIMER_PIN_MAP(' ${config} )" >> ${hFile}
+echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep 'TIMER_PIN_MAP(' "${config}" | grep -cv '^\s*//')" >> ${hFile}
 # to do: logic
 echo "#define USED_TIMERS (${usedTimers})" >> ${hFile}
 echo '' >> ${hFile}
