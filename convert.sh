@@ -1121,7 +1121,8 @@ for port in A B C D E F G H; do
         # Single-pin port (mask is a power of 2): emit exact BIT(n).
         # Multi-pin port: emit 0xffff so future pin additions never require mask edits.
         if (( (mask & (mask - 1)) == 0 )); then
-            printf '#define TARGET_IO_PORT%s 0x%04x\n' "$port" "$mask" >> "${hFile}"
+            pin_num=0; while (( (1 << pin_num) != mask )); do (( pin_num++ )); done
+            printf '#define TARGET_IO_PORT%s (BIT(%d))\n' "$port" "$pin_num" >> "${hFile}"
         else
             printf '#define TARGET_IO_PORT%s 0xffff\n' "$port" >> "${hFile}"
         fi
