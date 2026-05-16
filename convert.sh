@@ -113,7 +113,6 @@ echo "MCU: ${mcu}"
 case "${mcu}" in
     STM32F4*|STM32F405*|STM32F446*)  timerHwCsv="${scriptDir}/lookup/f4_timer_hw.csv" ;;
     STM32F7*|STM32F7x2*|STM32F745*|STM32F765*) timerHwCsv="${scriptDir}/lookup/f7_timer_hw.csv" ;;
-    STM32H7*) timerHwCsv="${scriptDir}/lookup/h7_timer_hw.csv" ;;
     *) timerHwCsv="${scriptDir}/lookup/f7_timer_hw.csv" ; echo 'notice: unknown MCU, defaulting to F7 timer table' ;;
 esac
 echo "timer table: ${timerHwCsv}"
