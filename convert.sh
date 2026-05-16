@@ -1118,10 +1118,16 @@ done < <(grep -oE '\bP[A-H][0-9]{1,2}\b' "$config" | sort -u)
 for port in A B C D E F G H; do
     mask="${portMask[$port]}"
     if [[ -n "$mask" && "$mask" -ne 0 ]]; then
-        printf '#define TARGET_IO_PORT%s 0x%04x\n' "$port" "$mask" >> "${hFile}"
+        # Single-pin port (mask is a power of 2): emit exact BIT(n).
+        # Multi-pin port: emit 0xffff so future pin additions never require mask edits.
+        if (( (mask & (mask - 1)) == 0 )); then
+            printf '#define TARGET_IO_PORT%s 0x%04x\n' "$port" "$mask" >> "${hFile}"
+        else
+            printf '#define TARGET_IO_PORT%s 0xffff\n' "$port" >> "${hFile}"
+        fi
     fi
 done
-echo '// notice - port masks computed from pin usage in config.h' >> ${hFile}
+echo '// notice - port masks derived from config.h; single-pin ports use exact mask, multi-pin ports use 0xffff' >> ${hFile}
 echo '' >> ${hFile}
 
 echo "building static default FEATURES"
