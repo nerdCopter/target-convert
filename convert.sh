@@ -631,6 +631,7 @@ grep BEEPER_INVERTED $config >> ${hFile}
 grep CAMERA_CONTROL_PIN $config >> ${hFile}
 if [[ $(grep USB_DETECT_PIN $config) ]] ; then
     echo '#define USE_USB_DETECT' >> ${hFile}
+    grep 'USB_DETECT_PIN' $config >> ${hFile}
 fi
 echo '' >> ${hFile}
 
@@ -1101,8 +1102,11 @@ do
 done
 echo ' - please verify ADC DMA Streams.'
 grep "DEFAULT_VOLTAGE_METER_SOURCE" $config >> ${hFile}
+scale=$(grep "DEFAULT_VOLTAGE_METER_SCALE" $config | awk '{print $3}')
+[[ -n "$scale" ]] && echo "#define VBAT_SCALE_DEFAULT $scale" >> ${hFile}
 grep "DEFAULT_CURRENT_METER_SOURCE" $config >> ${hFile}
-grep DEFAULT_CURRENT_METER_SCALE $config >> ${hFile}
+curscale=$(grep "DEFAULT_CURRENT_METER_SCALE" $config | awk '{print $3}')
+[[ -n "$curscale" ]] && echo "#define CURRENT_METER_SCALE_DEFAULT $curscale" >> ${hFile}
 grep ADC_INSTANCE $config >> ${hFile}
 echo '' >> ${hFile}
 
