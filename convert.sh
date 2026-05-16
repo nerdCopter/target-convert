@@ -6,11 +6,12 @@
 # Open to receiving more efficient and elegant code.
 # July 2023 and later revision requires Internet connection for automated definitions download.
 
-if [[ ! $# -eq 2 ]]  2>/dev/null; then
+if [[ $# -lt 1 ]] || [[ $# -gt 2 ]]  2>/dev/null; then
     echo "EmuFlight partial target converter script."
-    echo "Usage: ${0##*/} <unifiedTargetName> <targetFolder>"
-    echo "   Ex: ${0##*/} TURC-TUNERCF405 ./"
-    echo "   Ex: ${0##*/} DIAT-MAMBAF722_2022B ../EmuFlight/src/main/target/"
+    echo "Usage: ${0##*/} <targetName> [targetFolder]"
+    echo "   Ex: ${0##*/} TUNERCF405"
+    echo "   Ex: ${0##*/} TUNERCF405 ./"
+    echo "   Ex: ${0##*/} MAMBAF722_2022B ../EmuFlight/src/main/target/"
     echo ""
     echo "note: config.h downloaded from https://github.com/betaflight/config/"
     echo "      Timer/DMA resolved via local lookup tables in lookup/ (no unified-targets)."
@@ -89,10 +90,9 @@ echo "${generatedMessage}"
 echo "${generatedSHA}"
 echo ""
 
-manufacturer=$(echo ${1} | awk -F'-' '{print $1}')
-board=$(echo ${1} | awk -F'-' '{print $2}')
-fc="${manufacturer}_${board}"
-dest="${2}/${board}"
+board="${1}"
+fc="${board}"
+dest="${2:-.}/${board}"
 resources="${dest}/resources"
 
 echo "creating ${fc}"

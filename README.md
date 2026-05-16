@@ -1,6 +1,6 @@
 # EmuFlight target conversion script
 
-* This BASH script is a Work-In-Progress.  It downloads and processes target definitions from [Betaflight/config](https://github.com/betaflight/config) and [Betaflight/unified-targets](https://github.com/betaflight/unified-targets) in attempt to convert to EmuFlight targets.  Although functional, it does not account for every combination and still requires human modification to resultant files.
+* This BASH script is a Work-In-Progress.  It downloads and processes target definitions from [Betaflight/config](https://github.com/betaflight/config) in attempt to convert to EmuFlight targets.  Although functional, it does not account for every combination and still requires human modification to resultant files.
 
 #### Prerequisites:
 * `sudo apt install grep gawk sed coreutils findutils wget git`
@@ -13,14 +13,15 @@
 * `chmod +x ./convert.sh`
 
 #### Parameters:
-* This BASH script expect two parameters:
-  * [unified-target-name] in the format `VEND-TARGETNAME`. (Note the hyphen! Underscore will not work.)
-  * [destination-folder] in POSIX path format.
+* This BASH script expects one required parameter and one optional parameter:
+  * [targetName] — the Betaflight config target name (e.g. `TUNERCF405`). No vendor prefix needed.
+  * [destination-folder] — optional POSIX path; defaults to `./` if omitted.
 
 #### Examples:
-* `./convert.sh DIAT-MAMBAF405_2022B ./`
-* `./convert.sh TURC-TUNERCF405 ./temp`
-* `./convert.sh SPBE-SPEEDYBEE_F745_AIO ../EmuFlight/src/main/target/`
+* `./convert.sh TUNERCF405`
+* `./convert.sh MAMBAF405_2022B ./`
+* `./convert.sh TUNERCF405 ./temp`
+* `./convert.sh SPEEDYBEE_F745_AIO ../EmuFlight/src/main/target/`
 
 #### Outputs:
 * Creates a target-folder in the format `TARGETNAME` containing `target.mk`, `target.c`, `target.h`.
