@@ -7,3 +7,5 @@
 !convert.sh
 !info/*
 info/PLAN_no-unified-targets.md
+!lookup/
+!lookup/*

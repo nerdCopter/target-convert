@@ -111,19 +111,19 @@ scriptDir="$(cd "$(dirname "$0")" && pwd)"
 mcu=$(grep -m1 'FC_TARGET_MCU' "$config" | awk '{print $3}')
 echo "MCU: ${mcu}"
 case "${mcu}" in
-    STM32F4*|STM32F405*|STM32F446*)  timerHwTsv="${scriptDir}/lookup/f4_timer_hw.tsv" ;;
-    STM32F7*|STM32F7x2*|STM32F745*|STM32F765*) timerHwTsv="${scriptDir}/lookup/f7_timer_hw.tsv" ;;
-    STM32H7*) timerHwTsv="${scriptDir}/lookup/h7_timer_hw.tsv" ;;
-    *) timerHwTsv="${scriptDir}/lookup/f7_timer_hw.tsv" ; echo 'notice: unknown MCU, defaulting to F7 timer table' ;;
+    STM32F4*|STM32F405*|STM32F446*)  timerHwCsv="${scriptDir}/lookup/f4_timer_hw.csv" ;;
+    STM32F7*|STM32F7x2*|STM32F745*|STM32F765*) timerHwCsv="${scriptDir}/lookup/f7_timer_hw.csv" ;;
+    STM32H7*) timerHwCsv="${scriptDir}/lookup/h7_timer_hw.csv" ;;
+    *) timerHwCsv="${scriptDir}/lookup/f7_timer_hw.csv" ; echo 'notice: unknown MCU, defaulting to F7 timer table' ;;
 esac
-echo "timer table: ${timerHwTsv}"
+echo "timer table: ${timerHwCsv}"
 
 # Load timer hw lookup table into associative array: key=PIN_occurrence, value=TIMx:CHy
 declare -A timerLookup
-while IFS=$'\t' read -r pin occ tim ch; do
+while IFS=',' read -r pin occ tim ch; do
     [[ "$pin" == '#'* || -z "$pin" ]] && continue
     timerLookup["${pin}_${occ}"]="${tim}:${ch}"
-done < "${timerHwTsv}"
+done < "${timerHwCsv}"
 
 # Load motor pin defines from config.h into associative array: key=pin, value=motorN
 declare -A motorPins
@@ -533,7 +533,7 @@ grep TIMER_PIN_MAP $config | xargs -d'\n' --replace echo "{}" >> ${tFile}
 echo '' >> ${tFile}
 echo '// TIMER_PIN_MAP from config.h' >> ${tFile}
 echo '// format: TIMER_PIN_MAP(index, pin, occurrence, dmaopt)' >> ${tFile}
-echo '// occurrence selects which timer from the MCU timer table (see lookup/*.tsv)' >> ${tFile}
+echo '// occurrence selects which timer from the MCU timer table (see lookup/*.csv)' >> ${tFile}
 grep 'TIMER_PIN_MAP(' "$config" | sed 's/^/    /' >> ${tFile}
 
 # create target.h file
@@ -1053,10 +1053,10 @@ for i in {1..5}
 do
     dmaOpt=$(grep -m1 "ADC${i}_DMA_OPT" "$config" | awk '{print $3}')
     if [[ -n "$dmaOpt" ]]; then
-        adcLookup=$(grep -m1 "^${i}	${dmaOpt}	" "${scriptDir}/lookup/f4f7_dma_adc.tsv" 2>/dev/null)
+        adcLookup=$(grep -m1 "^${i},${dmaOpt}," "${scriptDir}/lookup/f4f7_dma_adc.csv" 2>/dev/null)
         if [[ -n "$adcLookup" ]]; then
-            ctrl=$(echo "$adcLookup" | awk '{print $3}')
-            stream=$(echo "$adcLookup" | awk '{print $4}')
+            ctrl=$(echo "$adcLookup" | awk -F',' '{print $3}')
+            stream=$(echo "$adcLookup" | awk -F',' '{print $4}')
             echo "#define ADC${i}_DMA_STREAM DMA${ctrl}_Stream${stream} // ADC${i} opt${dmaOpt}" >> ${hFile}
         else
             echo "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - ADC${i} opt${dmaOpt} not resolved; please verify" >> ${hFile}
