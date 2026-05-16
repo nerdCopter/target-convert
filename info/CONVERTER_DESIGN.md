@@ -23,7 +23,7 @@ The old `betaflight/unified-targets` repo (`.config` files, `VEND-TARGETNAME` fo
 
 CSV format: comma-separated, `#` comment lines skipped.
 
-### Timer hardware tables (`f4_timer_hw.csv`, `f7_timer_hw.csv`)
+### Timer hardware tables (`f4_timer_hw.csv`, `f7_timer_hw.csv`, `h7_timer_hw.csv`)
 
 ```
 # pin,occurrence,TIM,CH
@@ -32,8 +32,9 @@ PA0,2,TIM5,CH1
 ```
 
 - `occurrence` = which timer this pin maps to in priority order (matches the occurrence index in Betaflight's `TIMER_PIN_MAP`)
-- Generated from `timer_stm32f4xx.c` / `timer_stm32f7xx.c` in the Betaflight source
+- Generated from `timer_stm32f4xx.c` / `timer_stm32f7xx.c` / `timer_stm32h7xx.c` in the Betaflight source
 - Key in associative array: `PIN_occurrence` → `TIMx:CHy`
+- H7 note: TIM9/TIM10/TIM11 are absent on H7; TIM15/TIM16/TIM17 are present instead
 
 ### DMA tables (`f4f7_dma_adc.csv`, `f4f7_dma_timer.csv`, `f4f7_dma_spi.csv`)
 
@@ -49,6 +50,20 @@ PA0,2,TIM5,CH1
 
 See `tools/gen_lookup_tables.sh` — requires a local Betaflight source tree.
 
+## MCU family routing
+
+| Betaflight MCU | Timer CSV | `TARGET_BOARD_IDENTIFIER` | Make target group |
+|---|---|---|---|
+| STM32F405 | `f4_timer_hw.csv` | `S405` | `F405_TARGETS` |
+| STM32F411 | `f4_timer_hw.csv` | `S411` | `F411_TARGETS` |
+| STM32F446 | `f4_timer_hw.csv` | `S446` | `F446_TARGETS` |
+| STM32F7X2 | `f7_timer_hw.csv` | `S7X2` | `F7X2RE_TARGETS` |
+| STM32F745 | `f7_timer_hw.csv` | `S745` | `F7X5XG_TARGETS` |
+| STM32H723/H725 | `h7_timer_hw.csv` | `SH72` | `H723_TARGETS` |
+| STM32H730 | `h7_timer_hw.csv` | `S730` | `H730_TARGETS` |
+| STM32H743 | `h7_timer_hw.csv` | `SH74` | `H743_TARGETS` |
+| STM32H750 | `h7_timer_hw.csv` | `S750` | `H750_TARGETS` |
+
 ## Timer resolution (TIMER_PIN_MAP)
 
 Betaflight `config.h` contains:
@@ -61,10 +76,11 @@ Betaflight `config.h` contains:
 Format: `TIMER_PIN_MAP(index, PIN, occurrence, dmaopt)`
 
 The converter:
-1. Parses all `TIMER_PIN_MAP()` entries from `config.h`
-2. Looks up `PIN + occurrence` in the timer CSV to get `TIMx:CHy`
-3. Determines `TIM_USE_*` role from pin's define in config.h (MOTOR_PIN, PPM_PIN, LED_STRIP_PIN, CAMERA_CONTROL_PIN)
-4. Emits `DEF_TIM(TIMx, CHy, PIN, TIM_USE_xxx, 0, dmaopt)` in `target.c`
+1. Filters comment lines (`^\s*//`) — some configs include a `// TIMER_PIN_MAP(...)` header comment that matches the grep pattern
+2. Resolves macro pin names — H7 targets (and some others) use macro names like `MOTOR1_PIN` instead of literal pin values like `PC6`; the converter looks up `#define MACRONAME PIN` in config.h before doing the timer table lookup
+3. Looks up `PIN + occurrence` in the timer CSV to get `TIMx:CHy`
+4. Determines `TIM_USE_*` role from pin's define in config.h (MOTOR1..8_PIN → `TIM_USE_MOTOR`, SERVO1..4_PIN → `TIM_USE_SERVO`, PPM_PIN → `TIM_USE_PPM`, LED_STRIP_PIN → `TIM_USE_LED`, CAMERA_CONTROL_PIN → `TIM_USE_ANY`)
+5. Emits `DEF_TIM(TIMx, CHy, PIN, TIM_USE_xxx, 0, dmaopt)` in `target.c`
 
 ## GYRO SPI naming
 
@@ -92,10 +108,10 @@ The converter translates these automatically.
 
 ## Known limitations / manual review required
 
-- Dual-gyro targets: GYRO_1/GYRO_2 pin assignments may need validation
+- Dual-gyro targets: GYRO_1/GYRO_2 pin assignments may need validation; quad-gyro targets (e.g. STELLARH7DEV) require post-convert manual reduction to the one EmuFlight-supported gyro
+- H7 ADC DMA streams: not resolved — H7 uses DMAMUX (no fixed opt→stream mapping); output includes "please verify" notices
 - SPI RX (ELRS, FrSky): partially automated, manual completion needed
 - VTX RTC6705: skipped entirely, add manually if needed
 - GPS: skipped
-- ADC DMA streams: computed but marked with "please verify"
 - Some rare peripheral combinations not accounted for
 - Always search output files for the keyword `notice` to find items needing manual attention
