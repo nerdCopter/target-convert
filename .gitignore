@@ -5,6 +5,10 @@
 !.gitignore
 !README.md
 !convert.sh
+!info/
 !info/*
 !lookup/
 !lookup/*
+!.github/
+!.github/instructions/
+!.github/instructions/*
