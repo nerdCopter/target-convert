@@ -9,6 +9,8 @@
 !info/*
 !lookup/
 !lookup/*
+!tools/
+!tools/*
 !.github/
 !.github/instructions/
 !.github/instructions/*
