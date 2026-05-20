@@ -1103,10 +1103,10 @@ done
 echo ' - please verify ADC DMA Streams.'
 grep "DEFAULT_VOLTAGE_METER_SOURCE" $config >> ${hFile}
 scale=$(grep "DEFAULT_VOLTAGE_METER_SCALE" $config | awk '{print $3}')
-[[ -n "$scale" ]] && echo "#define VBAT_SCALE_DEFAULT $scale" >> ${hFile}
+[[ -n "$scale" ]] && echo "#define DEFAULT_VOLTAGE_METER_SCALE $scale" >> ${hFile}
 grep "DEFAULT_CURRENT_METER_SOURCE" $config >> ${hFile}
 curscale=$(grep "DEFAULT_CURRENT_METER_SCALE" $config | awk '{print $3}')
-[[ -n "$curscale" ]] && echo "#define CURRENT_METER_SCALE_DEFAULT $curscale" >> ${hFile}
+[[ -n "$curscale" ]] && echo "#define DEFAULT_CURRENT_METER_SCALE $curscale" >> ${hFile}
 grep ADC_INSTANCE $config >> ${hFile}
 echo '' >> ${hFile}
 
