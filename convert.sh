@@ -540,11 +540,19 @@ for (( i = 0; i < tpmCount; i++ )); do
         comment+="; dma -1 in config (input only)"
     fi
 
-    # H7 DEF_TIM requires a 7th argument (upopt: TIM_UP burst DShot stream, NONE = burst disabled)
+    # H7 DEF_TIM requires a 7th argument (upopt: TIM_UP burst stream pool index, NONE = burst disabled)
     if [[ "$mcu" == STM32H7* ]]; then
-        echo "    DEF_TIM(${timchOut}, ${pin}, ${timUse}, 0, ${dopt}, NONE), // ${comment}" >> ${cFile}
+        upopt="NONE"
+        timNum=$(echo "$timchOut" | sed -n 's/TIM\([0-9]\+\),.*/\1/p')
+        if [[ -n "$timNum" ]]; then
+            upoptVal=$(grep -m1 "TIMUP${timNum}_DMA_OPT" "$config" | awk '{print $3}')
+            if [[ -n "$upoptVal" && "$upoptVal" != "-1" ]]; then
+                upopt="$upoptVal"
+            fi
+        fi
+        echo "    DEF_TIM(${timchOut}, ${pin}, ${timUse}, 0, ${dopt}, ${upopt}), // ${comment}" >> "${cFile}"
     else
-        echo "    DEF_TIM(${timchOut}, ${pin}, ${timUse}, 0, ${dopt}), // ${comment}" >> ${cFile}
+        echo "    DEF_TIM(${timchOut}, ${pin}, ${timUse}, 0, ${dopt}), // ${comment}" >> "${cFile}"
     fi
 done
 echo '};' >> ${cFile}
