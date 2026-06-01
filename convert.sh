@@ -540,7 +540,20 @@ for (( i = 0; i < tpmCount; i++ )); do
         comment+="; dma -1 in config (input only)"
     fi
 
-    echo "    DEF_TIM(${timchOut}, ${pin}, ${timUse}, 0, ${dopt}), // ${comment}" >> ${cFile}
+    # H7 DEF_TIM requires a 7th argument (upopt: TIM_UP burst stream pool index, NONE = burst disabled)
+    if [[ "$mcu" == STM32H7* ]]; then
+        upopt="NONE"
+        timNum=$(echo "$timchOut" | sed -n 's/TIM\([0-9]\+\),.*/\1/p')
+        if [[ -n "$timNum" ]]; then
+            upoptVal=$(grep -m1 "TIMUP${timNum}_DMA_OPT" "$config" | awk '{print $3}')
+            if [[ -n "$upoptVal" && "$upoptVal" != "-1" ]]; then
+                upopt="$upoptVal"
+            fi
+        fi
+        echo "    DEF_TIM(${timchOut}, ${pin}, ${timUse}, 0, ${dopt}, ${upopt}), // ${comment}" >> "${cFile}"
+    else
+        echo "    DEF_TIM(${timchOut}, ${pin}, ${timUse}, 0, ${dopt}), // ${comment}" >> "${cFile}"
+    fi
 done
 echo '};' >> ${cFile}
 
@@ -594,7 +607,14 @@ echo '' >> ${hFile}
 # all the USE_ definitions - includes acc, gyro, flash, max, etc
 echo "building USE_"
 echo " - reference ./info/USE_.txt"
-grep "define USE_" $config >> ${hFile}
+# Emit USE_ defines; comment out those with no EmuFlight driver (H7 / BF-4.5 additions)
+grep "define USE_" "$config" | while IFS= read -r line; do
+    if echo "$line" | grep -qE 'USE_(ACCGYRO_(LSM6DSV16X|LSM6DSK320X|LSM6DSO|ICM40609D|ICM42686P|ICM45605|ICM45686|IIM42652|IIM42653)|GYRO_CLKIN)'; then
+        echo "// ${line} // not supported in EmuFlight"
+    else
+        echo "${line}"
+    fi
+done >> "${hFile}"
 if [[ $(grep USE_BARO $config) ]] ; then
     echo '#define USE_BARO' >> ${hFile}
 fi
@@ -1090,13 +1110,24 @@ for i in {1..5}
 do
     dmaOpt=$(grep -m1 "ADC${i}_DMA_OPT" "$config" | awk '{print $3}')
     if [[ -n "$dmaOpt" ]]; then
-        adcLookup=$(grep -m1 "^${i},${dmaOpt}," "${scriptDir}/lookup/f4f7_dma_adc.csv" 2>/dev/null)
-        if [[ -n "$adcLookup" ]]; then
-            ctrl=$(echo "$adcLookup" | awk -F',' '{print $3}')
-            stream=$(echo "$adcLookup" | awk -F',' '{print $4}')
-            echo "#define ADC${i}_DMA_STREAM DMA${ctrl}_Stream${stream} // ADC${i} opt${dmaOpt}" >> ${hFile}
+        if [[ "$mcu" == STM32H7* ]]; then
+            # H7: dmaopt is a pool stream index (0-7 = DMA1_S0..S7, 8-15 = DMA2_S0..S7)
+            if (( dmaOpt >= 0 && dmaOpt <= 7 )); then
+                echo "#define ADC${i}_DMA_STREAM DMA1_Stream${dmaOpt} // ADC${i} opt${dmaOpt}" >> ${hFile}
+            elif (( dmaOpt >= 8 && dmaOpt <= 15 )); then
+                echo "#define ADC${i}_DMA_STREAM DMA2_Stream$((dmaOpt - 8)) // ADC${i} opt${dmaOpt}" >> ${hFile}
+            else
+                echo "// #define ADC${i}_DMA_STREAM // notice - ADC${i} opt${dmaOpt} out of range for H7" >> ${hFile}
+            fi
         else
-            echo "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - ADC${i} opt${dmaOpt} not resolved; please verify" >> ${hFile}
+            adcLookup=$(grep -m1 "^${i},${dmaOpt}," "${scriptDir}/lookup/f4f7_dma_adc.csv" 2>/dev/null)
+            if [[ -n "$adcLookup" ]]; then
+                ctrl=$(echo "$adcLookup" | awk -F',' '{print $3}')
+                stream=$(echo "$adcLookup" | awk -F',' '{print $4}')
+                echo "#define ADC${i}_DMA_STREAM DMA${ctrl}_Stream${stream} // ADC${i} opt${dmaOpt}" >> ${hFile}
+            else
+                echo "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - ADC${i} opt${dmaOpt} not resolved; please verify" >> ${hFile}
+            fi
         fi
     fi
 done
