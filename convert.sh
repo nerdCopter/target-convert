@@ -258,9 +258,18 @@ fi
 
 # enable flash and drivers
 FEATURES='FEATURES       += VCP '
-if [[ $(grep SDCARD $config) ]]; then
+if [[ $(grep 'USE_SDCARD' $config) ]]; then
     FEATURES+='SDCARD'
-else
+fi
+if [[ $(grep 'USE_FLASH' $config) ]]; then
+    if [[ $FEATURES == *'SDCARD'* ]]; then
+        FEATURES+=' ONBOARDFLASH'
+    else
+        FEATURES+='ONBOARDFLASH'
+    fi
+fi
+if [[ $FEATURES == 'FEATURES       += VCP ' ]]; then
+    # No flash or sdcard detected; default to ONBOARDFLASH
     FEATURES+='ONBOARDFLASH'
 fi
 echo "${FEATURES}" >> ${mkFile}
@@ -621,9 +630,31 @@ fi
 echo '' >> ${hFile}
 
 echo '#define USE_VCP' >> ${hFile}
-if [[ $(grep USE_FLASH $config) ]] ; then
+if [[ $(grep 'USE_FLASH' $config) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
-    echo '#define USE_FLASH_M25P16    // 16MB Micron M25P16 driver; drives all unless QSPI' >> ${hFile}
+    # Detect NOR vs NAND flash chip types from BF config
+    has_nor=$(grep -E 'USE_FLASH_(W25Q128FV|M25P16|W25M512|PY25Q128HA)' $config 2>/dev/null)
+    has_nand=$(grep -E 'USE_FLASH_(W25N01G|W25N02K|W25M02G)' $config 2>/dev/null)
+    if [[ $has_nor || ! $has_nand ]] ; then
+        # NOR or unknown chip: emit NOR driver
+        if [[ $(grep 'USE_FLASH_W25Q128FV' $config) ]] ; then
+            echo '#define USE_FLASH_W25Q128FV' >> ${hFile}
+        fi
+        if [[ $(grep 'USE_FLASH_W25M512' $config) ]] ; then
+            echo '#define USE_FLASH_W25M512' >> ${hFile}
+        fi
+        echo '#define USE_FLASH_M25P16    // 16MB Micron M25P16 driver; drives all unless QSPI' >> ${hFile}
+    fi
+    # NAND chips
+    if [[ $(grep 'USE_FLASH_W25M02G' $config) ]] ; then
+        echo '#define USE_FLASH_W25M02G' >> ${hFile}
+    fi
+    if [[ $(grep 'USE_FLASH_W25N01G' $config) ]] ; then
+        echo '#define USE_FLASH_W25N01G' >> ${hFile}
+    fi
+    if [[ $(grep 'USE_FLASH_W25N02K' $config) ]] ; then
+        echo '#define USE_FLASH_W25N02K' >> ${hFile}
+    fi
 fi
 if [[ $(grep USE_MAX7456 $config) ]] ; then
     echo '#define USE_OSD' >> ${hFile}
