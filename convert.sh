@@ -261,7 +261,7 @@ FEATURES='FEATURES       += VCP '
 if [[ $(grep 'USE_SDCARD' $config) ]]; then
     FEATURES+='SDCARD'
 fi
-if [[ $(grep 'USE_FLASH' $config) ]]; then
+if [[ $(grep 'USE_FLASH' $config) || $(grep 'FLASH_CS_PIN' $config) ]]; then
     if [[ $FEATURES == *'SDCARD'* ]]; then
         FEATURES+=' ONBOARDFLASH'
     else
@@ -630,13 +630,13 @@ fi
 echo '' >> ${hFile}
 
 echo '#define USE_VCP' >> ${hFile}
-if [[ $(grep 'USE_FLASH' $config) ]] ; then
+if [[ $(grep 'USE_FLASH' $config) || $(grep 'FLASH_CS_PIN' $config) ]] ; then
     echo '#define USE_FLASHFS' >> ${hFile}
     # Detect NOR vs NAND flash chip types from BF config
     has_nor=$(grep -E 'USE_FLASH_(W25Q128FV|M25P16|W25M512|PY25Q128HA)' $config 2>/dev/null)
     has_nand=$(grep -E 'USE_FLASH_(W25N01G|W25N02K|W25M02G)' $config 2>/dev/null)
     if [[ $has_nor || ! $has_nand ]] ; then
-        # NOR or unknown chip: emit NOR driver
+        # NOR or unknown chip (including FLASH_CS_PIN-only configs): emit NOR driver
         if [[ $(grep 'USE_FLASH_W25Q128FV' $config) ]] ; then
             echo '#define USE_FLASH_W25Q128FV' >> ${hFile}
         fi
@@ -1094,7 +1094,7 @@ echo '' >> ${hFile}
 
 ## flash
 echo "building FLASH"
-if [[ $(grep 'USE_FLASH' $config) ]] ; then
+if [[ $(grep 'USE_FLASH' $config) || $(grep 'FLASH_CS_PIN' $config) ]] ; then
     grep FLASH_CS_PIN $config >> ${hFile}
     grep FLASH_SPI_INSTANCE $config >> ${hFile}
     translate "BLACKBOX_DEVICE_FLASH" $config '#define ENABLE_BLACKBOX_LOGGING_ON_SPIFLASH_BY_DEFAULT' ${hFile}
