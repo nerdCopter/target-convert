@@ -624,9 +624,7 @@ grep "define USE_" "$config" | while IFS= read -r line; do
         echo "${line}"
     fi
 done >> "${hFile}"
-if [[ $(grep USE_BARO $config) ]] ; then
-    echo '#define USE_BARO' >> ${hFile}
-fi
+translate 'USE_BARO' $config '#define USE_BARO' ${hFile}
 echo '' >> ${hFile}
 
 echo '#define USE_VCP' >> ${hFile}
@@ -637,35 +635,21 @@ if [[ $(grep 'USE_FLASH' $config) || $(grep 'FLASH_CS_PIN' $config) ]] ; then
     has_nand=$(grep -E 'USE_FLASH_(W25N01G|W25N02K|W25M02G)' $config 2>/dev/null)
     if [[ $has_nor || ! $has_nand ]] ; then
         # NOR or unknown chip (including FLASH_CS_PIN-only configs): emit NOR driver
-        if [[ $(grep 'USE_FLASH_W25Q128FV' $config) ]] ; then
-            echo '#define USE_FLASH_W25Q128FV' >> ${hFile}
-        fi
-        if [[ $(grep 'USE_FLASH_W25M512' $config) ]] ; then
-            echo '#define USE_FLASH_W25M512' >> ${hFile}
-        fi
+        translate 'USE_FLASH_W25Q128FV' $config '#define USE_FLASH_W25Q128FV' ${hFile}
+        translate 'USE_FLASH_W25M512'   $config '#define USE_FLASH_W25M512'   ${hFile}
         echo '#define USE_FLASH_M25P16    // 16MB Micron M25P16 driver; drives all unless QSPI' >> ${hFile}
     fi
     # NAND chips
-    if [[ $(grep 'USE_FLASH_W25M02G' $config) ]] ; then
-        echo '#define USE_FLASH_W25M02G' >> ${hFile}
-    fi
-    if [[ $(grep 'USE_FLASH_W25N01G' $config) ]] ; then
-        echo '#define USE_FLASH_W25N01G' >> ${hFile}
-    fi
-    if [[ $(grep 'USE_FLASH_W25N02K' $config) ]] ; then
-        echo '#define USE_FLASH_W25N02K' >> ${hFile}
-    fi
+    translate 'USE_FLASH_W25M02G' $config '#define USE_FLASH_W25M02G' ${hFile}
+    translate 'USE_FLASH_W25N01G' $config '#define USE_FLASH_W25N01G' ${hFile}
+    translate 'USE_FLASH_W25N02K' $config '#define USE_FLASH_W25N02K' ${hFile}
 fi
-if [[ $(grep USE_MAX7456 $config) ]] ; then
-    echo '#define USE_OSD' >> ${hFile}
-fi
+translate 'USE_MAX7456' $config '#define USE_OSD' ${hFile}
 echo '' >> ${hFile}
 
 # led
 echo "building LED"
-if [[ $(grep LED[0-9]_PIN $config) ]] ; then
-    echo '#define USE_LED' >> ${hFile}
-fi
+translate 'LED[0-9]_PIN' $config '#define USE_LED' ${hFile}
 grep "LED[0-9]_PIN" $config >> ${hFile}
 
 if [[ $(grep 'define[[:space:]\+]LED_STRIP_PIN' $config >> ${hFile}) ]] ; then
@@ -674,9 +658,7 @@ fi
 
 # beeper, cam-control, usb
 echo "building beeper, cam, usb"
-if [[ $(grep BEEPER_ $config) ]] ; then
-    echo '#define USE_BEEPER' >> ${hFile}
-fi
+translate 'BEEPER_' $config '#define USE_BEEPER' ${hFile}
 grep 'define[[:space:]\+]BEEPER_PIN' $config >> ${hFile}
 grep BEEPER_INVERTED $config >> ${hFile}
 grep CAMERA_CONTROL_PIN $config >> ${hFile}
@@ -688,15 +670,11 @@ echo '' >> ${hFile}
 
 # spi
 echo "building SPI"
-if [[ $(grep SPI $config) ]] ; then
-    echo '#define USE_SPI' >> ${hFile}
-fi
+translate 'SPI' $config '#define USE_SPI' ${hFile}
 
 for i in {1..6}
 do
-    if [[ $(grep "SPI${i}_" $config) ]] ; then
-        echo "#define USE_SPI_DEVICE_${i}" >> ${hFile}
-    fi
+    translate "SPI${i}_" $config "#define USE_SPI_DEVICE_${i}" ${hFile}
     grep SPI${i}_SCK_PIN $config >> ${hFile}
     translate SPI${i}_SDI_PIN $config "#define SPI${i}_MISO_PIN        $(grep SPI${i}_SDI_PIN $config | awk '{print $3}')" ${hFile}
     translate SPI${i}_SDO_PIN $config "#define SPI${i}_MOSI_PIN        $(grep SPI${i}_SDO_PIN $config | awk '{print $3}')" ${hFile}
@@ -1070,12 +1048,8 @@ fi
 
 #I2C
 #grep MAG_I2C_INSTANCE $config >> ${hFile} # purge as it will be duplicated by grep I2CDEV_${i}
-if [[ $(grep I2C $config) ]] ; then
-    echo '#define USE_I2C' >> ${hFile}
-fi
-if [[ $(grep "USE_I2C[0-4]_PULLUP" $config) ]] ; then
-    echo '#define USE_I2C_PULLUP' >> $hFile
-fi
+translate 'I2C' $config '#define USE_I2C' ${hFile}
+translate 'USE_I2C[0-4]_PULLUP' $config '#define USE_I2C_PULLUP' ${hFile}
 for i in {1..4}
 do
     if [[ $(grep "I2C${i}_" $config) ]] ; then
@@ -1083,9 +1057,7 @@ do
         echo "#define I2C_DEVICE_${i}      (I2CDEV_${i})" >> ${hFile}
     fi
     grep I2CDEV_${i} $config >> ${hFile} # duplicates MAG_I2C_INSTANCE
-    if [[ $(grep "USE_I2C${i}_PULLUP ON" $config) ]] ; then
-        echo "#define I2C${i}_PULLUP true" >> $hFile
-    fi
+    translate "USE_I2C${i}_PULLUP ON" $config "#define I2C${i}_PULLUP true" ${hFile}
     translate "I2C${i}_OVERCLOCK ON" $config "#define I2C${i}_OVERCLOCK true" ${hFile}
     translate "I2C${i}_SCL_PIN" $config "#define I2C${i}_SCL $(grep "I2C${i}_SCL_PIN" $config | awk '{print          $3}')" ${hFile}
     translate "I2C${i}_SDA_PIN" $config "#define I2C${i}_SDA $(grep "I2C${i}_SDA_PIN" $config | awk '{print          $3}')" ${hFile}
@@ -1129,9 +1101,7 @@ fi
 
 ## adc, default voltage/current, scale
 echo "building ADC"
-if [[ $(grep ADC $config) ]] ; then
-    echo '#define USE_ADC' >> ${hFile}
-fi
+translate 'ADC' $config '#define USE_ADC' ${hFile}
 translate "ADC_VBAT_PIN" $config "#define VBAT_ADC_PIN $(grep "ADC_VBAT_PIN" $config | awk '{print          $3}')" ${hFile}
 translate "ADC_CURR_PIN" $config "#define CURRENT_METER_ADC_PIN $(grep "ADC_CURR_PIN" $config | awk '{print          $3}')" ${hFile}
 translate "ADC_RSSI_PIN" $config "#define RSSI_ADC_PIN $(grep "ADC_RSSI_PIN" $config | awk '{print          $3}')" ${hFile}
