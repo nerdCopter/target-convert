@@ -728,7 +728,7 @@ fi
 
 G1_csPin=$(grep -w GYRO_1_CS_PIN $config | awk -F' ' '{print $3}')
 G1_extiPin=$(grep -w GYRO_1_EXTI_PIN $config | awk -F' ' '{print $3}')
-G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}' | sed 's/^SPI\([1-4]\)$/SPIDEV_\1/')
+G1_spi=$(grep -w GYRO_1_SPI_INSTANCE $config | awk -F' ' '{print $3}' | sed 's/^SPI\([1-6]\)$/SPIDEV_\1/')
 
 if [[ ! $(grep "GYRO_2_" $config) ]] ; then
     if [[ $(grep GYRO_1_EXTI_PIN $config) ]] ; then
@@ -750,7 +750,7 @@ if [[ $(grep "GYRO_2_" $config) ]] ; then # only define GYRO_1 when GYRO_2 exist
     echo "#define GYRO_1_ALIGN         ${G1_align}" >> ${hFile}
     grep GYRO_1_CS_PIN $config >> ${hFile}
     grep GYRO_1_EXTI_PIN $config >> ${hFile}
-    grep GYRO_1_SPI_INSTANCE $config | sed 's/_SPI_INSTANCE/_SPI_BUS/; s/\bSPI\([1-4]\)\b/SPIDEV_\1/g' >> ${hFile}
+    grep GYRO_1_SPI_INSTANCE $config | sed 's/_SPI_INSTANCE/_SPI_BUS/; s/\bSPI\([1-6]\)\b/SPIDEV_\1/g' >> ${hFile}
     echo ' - defined GYRO_1'
     echo '' >> ${hFile}
 fi
@@ -773,7 +773,7 @@ if [[ $(grep "GYRO_2_" $config) ]] ; then
     echo "#define GYRO_2_ALIGN         ${G2_align}" >> ${hFile}
     grep GYRO_2_CS_PIN $config >> ${hFile}
     grep GYRO_2_EXTI_PIN $config >> ${hFile}
-    grep GYRO_2_SPI_INSTANCE $config | sed 's/_SPI_INSTANCE/_SPI_BUS/; s/\bSPI\([1-4]\)\b/SPIDEV_\1/g' >> ${hFile}
+    grep GYRO_2_SPI_INSTANCE $config | sed 's/_SPI_INSTANCE/_SPI_BUS/; s/\bSPI\([1-6]\)\b/SPIDEV_\1/g' >> ${hFile}
     echo ' - defined GYRO_2'
     echo '' >> ${hFile}
 else #individual gyro/all defines
