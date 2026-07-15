@@ -37,6 +37,7 @@
 #### Pull-Requests to EmuFlight:
 * When making Pull-Requests to EmuFlight, do not include the `resources` sub-folder folder nor its contents. PR's should only include `TARGETNAME/target.*`.
 * Remove all unnecessary comments from the target files.
+* `BOARD_NAME`/`MANUFACTURER_ID` in `target.h` drive live EF behavior (top-priority board-identity source, and the `USBD_PRODUCT_STRING` fallback when not explicitly set). If you hand-edit `USBD_PRODUCT_STRING` or `TARGET_MANUFACTURER_IDENTIFIER` after conversion, update `BOARD_NAME`/`MANUFACTURER_ID` to match, or the two will silently diverge.
 
 #### Updating this script:
 * Be sure to keep your clone updated:
