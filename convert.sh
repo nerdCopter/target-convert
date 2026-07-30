@@ -14,6 +14,7 @@ if [[ $# -lt 1 ]] || [[ $# -gt 2 ]]  2>/dev/null; then
     echo "   Ex: ${0##*/} MAMBAF722_2022B ../EmuFlight/src/main/target/"
     echo ""
     echo "note: config.h downloaded from https://github.com/betaflight/config/"
+    echo "      manufacturer directory resolved automatically (repo is grouped configs/<MFR>/<BOARD>/)."
     echo "      Timer/DMA resolved via local lookup tables in lookup/ (no unified-targets)."
     exit
 fi
@@ -72,10 +73,10 @@ license='/*
  * If not, see <http://www.gnu.org/licenses/>.
  */
 '
-# examples: https://github.com/betaflight/config/raw/master/configs/TUNERCF405/config.h
-#           https://github.com/betaflight/unified-targets/raw/master/configs/default/TURC-TUNERCF405.config
-#           https://github.com/betaflight/config/raw/master/configs/MAMBAF722_2022B/config.h
-#           https://github.com/betaflight/unified-targets/raw/master/configs/default/DIAT-MAMBAF722_2022B.config
+# examples: https://github.com/betaflight/config/raw/master/configs/TURC/TUNERCF405/config.h
+#           https://github.com/betaflight/config/raw/master/configs/DIAT/MAMBAF722_2022B/config.h
+# repo layout is configs/<MANUFACTURER_ID>/<BOARD>/config.h; manufacturer directory is
+# resolved below via the repo's git tree API since only the board name is known here.
 
 echo ""
 
@@ -99,8 +100,23 @@ echo "creating ${fc}"
 mkdir ${dest} 2> /dev/null
 mkdir ${resources} 2> /dev/null
 
+echo "resolving manufacturer directory..."
+configTree=$(wget -qO- "https://api.github.com/repos/betaflight/config/git/trees/master?recursive=1")
+if [[ -z "$configTree" ]]; then
+    echo "failed to query betaflight/config repo tree. aborting."
+    rm -rf ${dest}
+    exit 1
+fi
+manufacturer=$(echo "$configTree" | grep -oE "configs/[A-Za-z0-9]+/${board}/config\.h" | head -1 | cut -d/ -f2)
+if [[ -z "$manufacturer" ]]; then
+    echo "board '${board}' not found in betaflight/config. aborting."
+    rm -rf ${dest}
+    exit 1
+fi
+echo "manufacturer: ${manufacturer}"
+
 echo "downloading..."
-wget -c -N -nv -P ${resources} "https://github.com/betaflight/config/raw/master/configs/${board}/config.h" || { echo "download failed. aborting." ; rm -rf ${dest} ; exit 1 ; }
+wget -c -N -nv -P ${resources} "https://github.com/betaflight/config/raw/master/configs/${manufacturer}/${board}/config.h" || { echo "download failed. aborting." ; rm -rf ${dest} ; exit 1 ; }
 
 config="${resources}/config.h"
 
