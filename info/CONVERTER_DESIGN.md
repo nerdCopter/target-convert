@@ -2,12 +2,17 @@
 
 ## Source of truth: betaflight/config
 
-All target definitions are fetched from:
-```
-https://github.com/betaflight/config/raw/master/configs/<TARGETNAME>/config.h
-```
+`betaflight/config` groups boards by manufacturer: `configs/<MANUFACTURER_ID>/<TARGETNAME>/config.h`. Board names are unique across the whole repo, so the converter still only needs the bare board name as input — it resolves `<MANUFACTURER_ID>` itself before downloading:
 
-The old `betaflight/unified-targets` repo (`.config` files, `VEND-TARGETNAME` format) is no longer used. The `betaflight/config` repo organizes by bare target name (`TUNERCF405/config.h`), which is why the vendor prefix is no longer required as input.
+1. `wget`s the repo's git tree (`https://api.github.com/repos/betaflight/config/git/trees/master?recursive=1`)
+2. `grep`s the tree listing for `configs/<MFR>/<TARGETNAME>/config.h` to recover `<MFR>`
+3. Downloads `https://github.com/betaflight/config/raw/master/configs/<MFR>/<TARGETNAME>/config.h`
+
+Only `wget`/`grep` are used for this — both are already hard dependencies of `convert.sh`; no `gh`/`curl`/`jq` requirement is introduced.
+
+The tree query is an unauthenticated GitHub REST API call, capped at 60 req/hr per IP — this limits back-to-back batch conversions to roughly that many per hour.
+
+The old `betaflight/unified-targets` repo (`.config` files, `VEND-TARGETNAME` format) is no longer used, and is unrelated to the manufacturer directory above — that vendor prefix is resolved automatically, not supplied by the caller.
 
 ## Input format
 
@@ -15,9 +20,9 @@ The old `betaflight/unified-targets` repo (`.config` files, `VEND-TARGETNAME` fo
 ./convert.sh <TARGETNAME> [outputFolder]
 ```
 
-- `TARGETNAME` = bare board name matching a directory in `betaflight/config/configs/`
+- `TARGETNAME` = bare board name; must be unique in `betaflight/config/configs/` (enforced repo-wide by upstream)
 - `outputFolder` = optional, defaults to `./`
-- Previously required `VEND-TARGETNAME` format (e.g. `TURC-TUNERCF405`) — no longer needed
+- Previously required `VEND-TARGETNAME` format (e.g. `TURC-TUNERCF405`) — no longer needed, and not to be confused with the `<MANUFACTURER_ID>` directory betaflight/config now uses internally
 
 ## Lookup tables (lookup/*.csv)
 
