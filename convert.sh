@@ -197,7 +197,7 @@ echo "building ${mkFile}"
 # STM32F411SX1280
 # STM32F4DISCOVERY
 # STM32F745
-# STM32F7X2
+# STM32F7X2 (aka STM32F722)
 # STM32G47X
 # STM32H723
 # STM32H730
@@ -230,7 +230,7 @@ echo "building ${mkFile}"
 # STM32F411 #define TARGET_BOARD_IDENTIFIER "S411"
 # STM32F446 #define TARGET_BOARD_IDENTIFIER "S446"
 # STM32F745 #define TARGET_BOARD_IDENTIFIER "S745"
-# STM32F7X2 #define TARGET_BOARD_IDENTIFIER "S7X2"
+# STM32F7X2 (aka STM32F722) #define TARGET_BOARD_IDENTIFIER "S7X2"
 # STM32G47X #define TARGET_BOARD_IDENTIFIER "SG47"
 # STM32H723 #define TARGET_BOARD_IDENTIFIER "SH72"
 # STM32H725 #define TARGET_BOARD_IDENTIFIER "SH72"
@@ -247,7 +247,7 @@ elif [[ $(grep STM32F411 $config) ]]; then
 elif [[ $(grep STM32F446 $config) ]]; then
     echo 'F446_TARGETS   += $(TARGET)' > ${mkFile}
     TBID="S446"
-elif [[ $(grep STM32F7X2 $config) ]]; then
+elif [[ $(grep -E 'STM32F7X2|STM32F722' $config) ]]; then
     echo 'F7X2RE_TARGETS += $(TARGET)' > ${mkFile}
     TBID="S7X2"
 elif [[ $(grep STM32F745 $config) ]]; then

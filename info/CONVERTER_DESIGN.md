@@ -62,7 +62,7 @@ See `tools/gen_lookup_tables.sh` — requires a local Betaflight source tree.
 | STM32F405 | `f4_timer_hw.csv` | `S405` | `F405_TARGETS` |
 | STM32F411 | `f4_timer_hw.csv` | `S411` | `F411_TARGETS` |
 | STM32F446 | `f4_timer_hw.csv` | `S446` | `F446_TARGETS` |
-| STM32F7X2 | `f7_timer_hw.csv` | `S7X2` | `F7X2RE_TARGETS` |
+| STM32F7X2/F722 | `f7_timer_hw.csv` | `S7X2` | `F7X2RE_TARGETS` |
 | STM32F745 | `f7_timer_hw.csv` | `S745` | `F7X5XG_TARGETS` |
 | STM32H723/H725 | `h7_timer_hw.csv` | `SH72` | `H723_TARGETS` |
 | STM32H730 | `h7_timer_hw.csv` | `S730` | `H730_TARGETS` |
