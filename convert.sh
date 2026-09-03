@@ -275,10 +275,14 @@ fi
 # enable flash and drivers
 FEATURES='FEATURES       += VCP '
 if [[ $(grep 'USE_SDCARD' $config) ]]; then
-    FEATURES+='SDCARD'
+    if [[ $(grep -E 'USE_SDCARD_SPI|SDCARD_SPI_INSTANCE|SDCARD_SPI_CS_PIN' $config) ]]; then
+        FEATURES+='SDCARD'
+    else
+        FEATURES+='SDIO'
+    fi
 fi
 if [[ $(grep 'USE_FLASH' $config) || $(grep 'FLASH_CS_PIN' $config) ]]; then
-    if [[ $FEATURES == *'SDCARD'* ]]; then
+    if [[ $FEATURES == *'SDCARD'* || $FEATURES == *'SDIO'* ]]; then
         FEATURES+=' ONBOARDFLASH'
     else
         FEATURES+='ONBOARDFLASH'
@@ -1089,15 +1093,19 @@ fi
 
 ## sdcard
 if [[ $(grep USE_SDCARD $config) ]] ; then
-    echo "#define USE_SDCARD_SDIO" >> ${hFile}
-    grep SDCARD_SPI_CS_PIN $config >> ${hFile}
-    grep SDCARD_SPI_INSTANCE $config >> ${hFile}
-    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL          X            // please verify" >> ${hFile}
-    echo "//notice - NEED: #define SDCARD_DMA_CHANNEL_TX       DMAx_StreamX // please verify" >> ${hFile}
+    if [[ $(grep -E 'USE_SDCARD_SPI|SDCARD_SPI_INSTANCE|SDCARD_SPI_CS_PIN' $config) ]]; then
+        echo "#define USE_SDCARD_SPI" >> ${hFile}
+        grep SDCARD_SPI_CS_PIN $config >> ${hFile}
+        grep SDCARD_SPI_INSTANCE $config >> ${hFile}
+        echo "#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4    //notice - needs validation. these are hardware dependent. known options: 2, 4, 8." >> ${hFile}
+        echo "#define SDCARD_SPI_INITIALIZATION_CLOCK_DIVIDER 256  //notice - needs validation. these are hardware dependent. known options: 128, 256" >> ${hFile}
+    else
+        echo "#define USE_SDCARD_SDIO" >> ${hFile}
+        echo "//notice - NEED: #define SDCARD_DMA_CHANNEL          X            // please verify" >> ${hFile}
+        echo "//notice - NEED: #define SDCARD_DMA_CHANNEL_TX       DMAx_StreamX // please verify" >> ${hFile}
+    fi
     echo "//notice - other sdcard defines maybe needed (rare?): SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX, SDCARD_DMA_CLK, SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG" >> ${hFile}
     translate "BLACKBOX_DEVICE_SDCARD" $config "#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT" ${hFile}
-    echo "#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4    //notice - needs validation. these are hardware dependent. known options: 2, 4, 8." >> ${hFile}
-    echo "#define SDCARD_SPI_INITIALIZATION_CLOCK_DIVIDER 256  //notice - needs validation. these are hardware dependent. known options: 128, 256" >> ${hFile}
     grep SDCARD_DETECT_INVERTED $config >> ${hFile}
     echo '' >> ${hFile}
 fi
