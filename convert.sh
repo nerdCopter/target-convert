@@ -1101,8 +1101,9 @@ if [[ $(grep USE_SDCARD $config) ]] ; then
         echo "#define SDCARD_SPI_INITIALIZATION_CLOCK_DIVIDER 256  //notice - needs validation. these are hardware dependent. known options: 128, 256" >> ${hFile}
     else
         echo "#define USE_SDCARD_SDIO" >> ${hFile}
-        echo "//notice - NEED: #define SDCARD_DMA_CHANNEL          X            // please verify" >> ${hFile}
-        echo "//notice - NEED: #define SDCARD_DMA_CHANNEL_TX       DMAx_StreamX // please verify" >> ${hFile}
+        if [[ "$mcu" != STM32H7* ]]; then
+            echo "//notice - NEED: #define SDIO_DMA DMAx_StreamX // please verify" >> ${hFile}
+        fi
     fi
     echo "//notice - other sdcard defines maybe needed (rare?): SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX, SDCARD_DMA_CLK, SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG" >> ${hFile}
     translate "BLACKBOX_DEVICE_SDCARD" $config "#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT" ${hFile}
