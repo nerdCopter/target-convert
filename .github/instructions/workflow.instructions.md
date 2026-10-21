@@ -30,13 +30,13 @@ The root `.gitignore` starts with `/*` (block everything) and uses only `!allowl
 
 ## Testing before merge
 
-Run all five reference targets and verify output:
+Run all five reference targets (`--force`: an existing target folder aborts the run) and verify output:
 ```
-./convert.sh FOXEERF722V4 ./test
-./convert.sh TUNERCF405 ./test
-./convert.sh TMOTORF7 ./test
-./convert.sh PYRODRONEF7 ./test
-./convert.sh SKYSTARSF405AIO ./test
+./convert.sh --force FOXEERF722V4 ./test
+./convert.sh --force TUNERCF405 ./test
+./convert.sh --force TMOTORF7 ./test
+./convert.sh --force PYRODRONEF7 ./test
+./convert.sh --force SKYSTARSF405AIO ./test
 ```
 
 Check: no aborts; `TIMER_PIN_MAPPING` in `target.h` is identical to the reference block; the output has no `timerHardware`, `USED_TIMERS`, `USABLE_TIMER_CHANNEL_COUNT`, `TARGET_IO_PORT` or `notice`.
