@@ -1000,7 +1000,8 @@ fi
 
 # pinio
 echo "building PINIO"
-if [[ $(grep 'PINIO[0-9]_' "$config" >> "${hFile}") ]] ; then
+if grep -q 'PINIO[0-9]_' "$config" ; then
+    grep 'PINIO[0-9]_' "$config" >> "${hFile}"
     echo '#define USE_PINIOBOX' >> "$hFile"
     echo '' >> "$hFile"
 fi
@@ -1008,7 +1009,7 @@ fi
 # button
 echo "building button"
 if grep -q BUTTON_[AB] "$config" ; then
-    grep 'USB_MSC_BUTTON_PIN' >> "${hFile}"
+    grep 'USB_MSC_BUTTON_PIN' "$config" >> "${hFile}"
     grep "BUTTON_[AB]" "$config" >> "${hFile}"
     echo '' >> "${hFile}"
 fi
