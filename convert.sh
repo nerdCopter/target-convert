@@ -393,7 +393,9 @@ translate USE_BARO_SPI_BMP280 "${config}" 'drivers/barometer/barometer_bmp280.c 
 translate USE_BARO_DPS310 "${config}" 'drivers/barometer/barometer_dps310.c \' "${mkFile}"
 translate USE_BARO_SPI_DPS310 "${config}" 'drivers/barometer/barometer_dps310.c \' "${mkFile}"
 translate USE_BARO_LPS "${config}" 'drivers/barometer/barometer_lps.c \' "${mkFile}"
+translate USE_BARO_SPI_LPS "${config}" 'drivers/barometer/barometer_lps.c \' "${mkFile}"
 translate USE_BARO_MS5611 "${config}" 'drivers/barometer/barometer_ms5611.c \' "${mkFile}"
+translate USE_BARO_SPI_MS5611 "${config}" 'drivers/barometer/barometer_ms5611.c \' "${mkFile}"
 translate USE_BARO_QMP6988 "${config}" 'drivers/barometer/barometer_qmp6988.c \' "${mkFile}"
 # skipping non-supported
 
