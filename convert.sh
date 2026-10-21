@@ -720,7 +720,7 @@ fi
 
 # the gyro defines below cover only these drivers; report a config that enables none of them
 if ! grep -qE '^[[:space:]]*#[[:space:]]*define[[:space:]]+USE_(GYRO_SPI_(MPU6000|MPU6500|MPU9250|ICM20689|ICM20601|ICM20602|ICM42688P)|ACC_SPI_ICM42688P|ACCGYRO_BMI270)([[:space:]]|$)' "$config" ; then
-    notice 'no gyro that this script maps found in config.h (mapped: MPU6000, MPU6500, MPU9250, ICM20689, ICM20601, ICM20602, ICM42688P, BMI270); add the gyro defines by hand.'
+    notice 'no recognized gyro-enable define found in config.h (checked models: MPU6000, MPU6500, MPU9250, ICM20689, ICM20601, ICM20602, ICM42688P, BMI270); check the gyro defines and add missing ones by hand.'
 fi
 
 ## vcp, uarts, softserial
