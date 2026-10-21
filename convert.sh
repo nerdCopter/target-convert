@@ -52,10 +52,6 @@ if [[ ! $( which expr ) ]] ; then
     echo 'please install: expr'
     exit 1
 fi
-if [[ ! $( which xargs ) ]] ; then
-    echo 'please install: xargs'
-    exit 1
-fi
 if [[ ! $( which wget ) ]] ; then
     echo 'please install: wget'
     exit 1
@@ -116,10 +112,7 @@ fi
 
 echo "creating ${fc}"
 createdDest=0
-if [[ -e "${dest}" ]]; then
-    # --force: drop generated files of earlier runs, including the stale downloaded config
-    rm -f "${dest}/target.mk" "${dest}/target.h" "${dest}/target.c" "${resources}/config.h" "${resources}/timers.txt"
-else
+if [[ ! -e "${dest}" ]]; then
     createdDest=1
 fi
 mkdir -p "${resources}"
@@ -145,7 +138,9 @@ fi
 echo "manufacturer: ${manufacturer}"
 
 echo "downloading..."
-wget -c -N -nv -P "${resources}" "https://github.com/betaflight/config/raw/master/configs/${manufacturer}/${board}/config.h" || { echo "download failed. aborting." ; abort_cleanup ; exit 1 ; }
+# download to a temporary name so a failed run keeps the previous config.h
+wget -nv -O "${resources}/config.h.part" "https://github.com/betaflight/config/raw/master/configs/${manufacturer}/${board}/config.h" || { rm -f "${resources}/config.h.part" ; echo "download failed. aborting." ; abort_cleanup ; exit 1 ; }
+mv -f "${resources}/config.h.part" "${resources}/config.h"
 
 config="${resources}/config.h"
 
@@ -259,6 +254,9 @@ else
     abort_cleanup
     exit 1
 fi
+
+# --force: drop stale generated files of earlier runs now that the config and MCU are valid
+rm -f "${dest}/target.c" "${resources}/timers.txt"
 
 # enable flash and drivers
 FEATURES='FEATURES       += VCP '
@@ -473,7 +471,6 @@ else
     echo "${timerMap}" >> "${hFile}"
 fi
 grep -E '^[[:space:]]*#[[:space:]]*define[[:space:]]+(MOTOR[0-9]+_PIN|SERVO[0-9]+_PIN|RX_PWM[0-9]+_PIN|RX_PPM_PIN|LED_STRIP_PIN|TRANSPONDER_PIN|CAMERA_CONTROL_PIN|GYRO_[0-9]+_CLKIN_PIN|TIMUP[0-9]+_DMA_OPT)[[:space:]]' "$config" >> "${hFile}"
-# every non-literal pin the map names must be defined in target.h (checked at the end)
 echo '' >> "${hFile}"
 
 # all the USE_ definitions - includes acc, gyro, flash, max, etc
@@ -483,6 +480,8 @@ echo " - reference ./info/USE_.txt"
 grep "define USE_" "$config" | while IFS= read -r line; do
     if echo "$line" | grep -qE 'USE_(ACCGYRO_(LSM6DSV16X|LSM6DSK320X|LSM6DSO|ICM40609D|ICM42686P|ICM45605|ICM45686|IIM42652|IIM42653)|GYRO_CLKIN)'; then
         echo "// ${line} // not supported in EmuFlight"
+    elif echo "$line" | grep -qE 'USE_ESCSERIAL([[:space:]]|$)'; then
+        :  # fleet-wide default in EmuFlight
     else
         echo "${line}"
     fi
@@ -520,7 +519,7 @@ translate 'define[[:space:]]\+LED_STRIP_PIN' "$config" '#define USE_LED_STRIP' "
 # beeper, cam-control, usb
 echo "building beeper, cam, usb"
 translate 'BEEPER_' "$config" '#define USE_BEEPER' "${hFile}"
-grep 'define[[:space:]\+]BEEPER_PIN' "$config" >> "${hFile}"
+grep -E '^[[:space:]]*#[[:space:]]*define[[:space:]]+BEEPER_PIN[[:space:]]' "$config" >> "${hFile}"
 grep BEEPER_INVERTED "$config" >> "${hFile}"
 if grep -q USB_DETECT_PIN "$config" ; then
     echo '#define USE_USB_DETECT' >> "${hFile}"
@@ -724,7 +723,7 @@ for ((i=1; i<=10; i++)) #only seen 8 in EmuF, saw 10 in BF
 do
     if grep -q "UART${i}_[TR]X_PIN" "$config" ; then
         echo "#define USE_UART${i}" >> "${hFile}"
-        grep "define[[:space:]\+]UART${i}_[TR]X_PIN" "$config" >> "${hFile}"
+        grep -E "^[[:space:]]*#[[:space:]]*define[[:space:]]+UART${i}_[TR]X_PIN[[:space:]]" "$config" >> "${hFile}"
         ((hardserial++))
     fi
 done
@@ -1025,15 +1024,18 @@ echo "#define DEFAULT_RX_FEATURE     ${featureRX}" >> "${hFile}"
 echo '' >> "${hFile}"
 
 
-# a TIMER_PIN_MAP row naming an undefined macro breaks the build
-for tok in $(echo "${timerMap}" | grep -oE 'TIMER_PIN_MAP\([^,]*,[^,]*,' | awk -F, '{gsub(/[[:space:]]/, "", $2); print $2}' | grep -vE '^P[A-I][0-9]+$' | sort -u); do
-    grep -qE "define[[:space:]]+${tok}[[:space:]]" "${hFile}" || notice "TIMER_PIN_MAPPING names ${tok}, which target.h does not define."
-done
-
 echo 'cleaning files'
 sed '/"TODO"/d' -i "${hFile}"
-awk -i inplace '!(NF && seen[$0]++)' "${hFile}" # deduplicate, but skip empty lines
+# deduplicate, but skip empty lines and the verbatim TIMER_PIN_MAPPING block
+awk -i inplace '/^[[:space:]]*#[[:space:]]*define[[:space:]]+TIMER_PIN_MAPPING([[:space:]]|$)/ { m = 1 }
+    m { print; if ($0 !~ /\\[[:space:]]*$/) m = 0; next }
+    !(NF && seen[$0]++)' "${hFile}"
 awk -i inplace '!(NF && seen[$0]++)' "${mkFile}" # deduplicate, but skip empty lines
+
+# a TIMER_PIN_MAP row naming an undefined macro breaks the build; check the final file
+for tok in $(echo "${timerMap}" | grep -oE 'TIMER_PIN_MAP[[:space:]]*\([^,]*,[^,]*,' | awk -F, '{gsub(/[[:space:]]/, "", $2); print $2}' | grep -vE '^P[A-K][0-9]+$' | sort -u); do
+    grep -qE "^[[:space:]]*#[[:space:]]*define[[:space:]]+${tok}[[:space:]]" "${hFile}" || notice "TIMER_PIN_MAPPING names ${tok}, which target.h does not define."
+done
 
 echo ''
 echo 'Task finished. No guarantees; Definitions are likely incomplete.'

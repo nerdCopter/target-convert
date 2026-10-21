@@ -39,7 +39,7 @@ Run all five reference targets and verify output:
 ./convert.sh SKYSTARSF405AIO ./test
 ```
 
-Check: port masks match convention (`0xffff` multi-pin, `(BIT(n))` single-pin), timers resolve, no aborts.
+Check: no aborts; `TIMER_PIN_MAPPING` in `target.h` is identical to the reference block; the output has no `timerHardware`, `USED_TIMERS`, `USABLE_TIMER_CHANNEL_COUNT`, `TARGET_IO_PORT` or `notice`.
 
 ## Scope
 
