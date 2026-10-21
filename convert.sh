@@ -718,9 +718,9 @@ else #individual gyro/all defines
     fi
 fi
 
-# EmuFlight needs one of the gyro drivers mapped above; report a config that enables none of them
-if ! grep -qE '^[[:space:]]*#[[:space:]]*define[[:space:]]+USE_(GYRO_SPI_(MPU6000|MPU6500|MPU9250|ICM20689|ICM20601|ICM20602)|(ACC|GYRO)_SPI_ICM426[0-9A-Z]*|ACCGYRO_BMI270)([[:space:]]|$)' "$config" ; then
-    notice 'no supported gyro found in config.h (supported: MPU6000, MPU6500, MPU9250, ICM20689, ICM20601, ICM20602, ICM426xx, BMI270); the target has no usable gyro.'
+# the gyro defines below cover only these drivers; report a config that enables none of them
+if ! grep -qE '^[[:space:]]*#[[:space:]]*define[[:space:]]+USE_(GYRO_SPI_(MPU6000|MPU6500|MPU9250|ICM20689|ICM20601|ICM20602|ICM42688P)|ACC_SPI_ICM42688P|ACCGYRO_BMI270)([[:space:]]|$)' "$config" ; then
+    notice 'no gyro that this script maps found in config.h (mapped: MPU6000, MPU6500, MPU9250, ICM20689, ICM20601, ICM20602, ICM42688P, BMI270); add the gyro defines by hand.'
 fi
 
 ## vcp, uarts, softserial
