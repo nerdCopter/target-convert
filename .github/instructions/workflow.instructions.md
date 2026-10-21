@@ -30,7 +30,7 @@ The root `.gitignore` starts with `/*` (block everything) and uses only `!allowl
 
 ## Testing before merge
 
-Run all five reference targets (`--force`: an existing target folder aborts the run) and verify output:
+Run all five reference targets (without `--force`, an existing target folder aborts the run) and verify output:
 ```
 ./convert.sh --force FOXEERF722V4 ./test
 ./convert.sh --force TUNERCF405 ./test
