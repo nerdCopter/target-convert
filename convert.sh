@@ -6,16 +6,29 @@
 # Open to receiving more efficient and elegant code.
 # July 2023 and later revision requires Internet connection for automated definitions download.
 
+force=0
+args=()
+for arg in "$@"; do
+    case "${arg}" in
+        -f|--force) force=1 ;;
+        -*) echo "unknown option '${arg}'. aborting."; exit 1 ;;
+        *) args+=("${arg}") ;;
+    esac
+done
+set -- "${args[@]}"
+
 if [[ $# -lt 1 ]] || [[ $# -gt 2 ]]  2>/dev/null; then
     echo "EmuFlight partial target converter script."
-    echo "Usage: ${0##*/} <targetName> [targetFolder]"
+    echo "Usage: ${0##*/} [-f|--force] <targetName> [targetFolder]"
     echo "   Ex: ${0##*/} TUNERCF405"
     echo "   Ex: ${0##*/} TUNERCF405 ./"
     echo "   Ex: ${0##*/} MAMBAF722_2022B ../EmuFlight/src/main/target/"
     echo ""
     echo "note: config.h downloaded from https://github.com/betaflight/config/"
     echo "      manufacturer directory resolved automatically (repo is grouped configs/<MFR>/<BOARD>/)."
-    echo "      Timer/DMA resolved via local lookup tables in lookup/ (no unified-targets)."
+    echo "      TIMER_PIN_MAPPING, named pins and DMA options are copied verbatim from config.h."
+    echo "      An existing <targetFolder>/<targetName> aborts the run unless --force is given."
+    echo "      Open items are written to <targetName>/resources/open-items.txt."
     exit
 fi
 
@@ -96,84 +109,59 @@ fc="${board}"
 dest="${2:-.}/${board}"
 resources="${dest}/resources"
 
+if [[ -e "${dest}" && ${force} -eq 0 ]]; then
+    echo "'${dest}' already exists. aborting; use --force to overwrite."
+    exit 1
+fi
+
 echo "creating ${fc}"
-mkdir "${dest}" 2> /dev/null
-mkdir "${resources}" 2> /dev/null
+createdDest=0
+if [[ -e "${dest}" ]]; then
+    # --force: drop generated files of earlier runs, including the stale downloaded config
+    rm -f "${dest}/target.mk" "${dest}/target.h" "${dest}/target.c" "${resources}/config.h" "${resources}/timers.txt"
+else
+    createdDest=1
+fi
+mkdir -p "${resources}"
+
+# remove the destination on abort only when this run created it
+abort_cleanup() {
+    [[ ${createdDest} -eq 1 ]] && rm -rf "${dest}"
+}
 
 echo "resolving manufacturer directory..."
 configTree=$(wget -qO- "https://api.github.com/repos/betaflight/config/git/trees/master?recursive=1")
 if [[ -z "$configTree" ]]; then
     echo "failed to query betaflight/config repo tree. aborting."
-    rm -rf "${dest}"
+    abort_cleanup
     exit 1
 fi
 manufacturer=$(echo "$configTree" | grep -oE "configs/[A-Za-z0-9]+/${board}/config\.h" | head -1 | cut -d/ -f2)
 if [[ -z "$manufacturer" ]]; then
     echo "board '${board}' not found in betaflight/config. aborting."
-    rm -rf "${dest}"
+    abort_cleanup
     exit 1
 fi
 echo "manufacturer: ${manufacturer}"
 
 echo "downloading..."
-wget -c -N -nv -P "${resources}" "https://github.com/betaflight/config/raw/master/configs/${manufacturer}/${board}/config.h" || { echo "download failed. aborting." ; rm -rf "${dest}" ; exit 1 ; }
+wget -c -N -nv -P "${resources}" "https://github.com/betaflight/config/raw/master/configs/${manufacturer}/${board}/config.h" || { echo "download failed. aborting." ; abort_cleanup ; exit 1 ; }
 
 config="${resources}/config.h"
 
 echo "config.h: ${config}"
 
-# Detect MCU family and load timer hardware lookup table
-scriptDir="$(cd "$(dirname "$0")" && pwd)"
+# Detect MCU family
 mcu=$(grep -m1 'FC_TARGET_MCU' "$config" | awk '{print $3}')
 echo "MCU: ${mcu}"
-case "${mcu}" in
-    STM32F4*|STM32F405*|STM32F446*)  timerHwCsv="${scriptDir}/lookup/f4_timer_hw.csv" ;;
-    STM32F7*|STM32F7x2*|STM32F745*|STM32F765*) timerHwCsv="${scriptDir}/lookup/f7_timer_hw.csv" ;;
-    STM32H7*) timerHwCsv="${scriptDir}/lookup/h7_timer_hw.csv" ;;
-    *) timerHwCsv="${scriptDir}/lookup/f7_timer_hw.csv" ; echo 'notice: unknown MCU, defaulting to F7 timer table' ;;
-esac
-echo "timer table: ${timerHwCsv}"
-
-# Load timer hw lookup table into associative array: key=PIN_occurrence, value=TIMx:CHy
-declare -A timerLookup
-while IFS=',' read -r pin occ tim ch; do
-    [[ "$pin" == '#'* || -z "$pin" ]] && continue
-    timerLookup["${pin}_${occ}"]="${tim}:${ch}"
-done < "${timerHwCsv}"
-
-# Load motor pin defines from config.h into associative array: key=pin, value=motorN
-declare -A motorPins
-for n in 1 2 3 4 5 6 7 8; do
-    mp=$(grep -m1 "MOTOR${n}_PIN" "$config" | awk '{print $3}')
-    [[ -n "$mp" ]] && motorPins["${mp}"]="${n}"
-done
-
-# Load servo pin defines from config.h into associative array: key=pin, value=servoN
-declare -A servoPins
-for n in 1 2 3 4; do
-    sp=$(grep -m1 "SERVO${n}_PIN" "$config" | awk '{print $3}')
-    [[ -n "$sp" ]] && servoPins["${sp}"]="${n}"
-done
-
-# Load peripheral pin defines from config.h
-ppmPin=$(grep -m1 'PPM_PIN\b' "$config" | awk '{print $3}')
-ledPin=$(grep -m1 'LED_STRIP_PIN\b' "$config" | awk '{print $3}')
-camPin=$(grep -m1 'CAMERA_CONTROL_PIN\b' "$config" | awk '{print $3}')
-
 mkFile="${dest}/target.mk"
-cFile="${dest}/target.c"
 hFile="${dest}/target.h"
-tFile="${resources}/timers.txt"
+openItems="${resources}/open-items.txt"
+: > "${openItems}"
 
-resolvePinMacro() {
-    local tok="$1"
-    if [[ "$tok" =~ ^P[A-K][0-9]{1,2}$ ]]; then
-        echo "$tok"
-    else
-        local val
-        val=$(grep -m1 "^#define ${tok}[[:space:]]" "$config" | awk '{print $3}')
-        echo "${val:-$tok}"
-    fi
+# open items are kept out of the target files; one line per item
+notice () {
+    echo "$1" >> "${openItems}"
 }
 
 function translate () {
@@ -268,8 +256,8 @@ elif grep -q STM32H750 "$config"; then
 else
     echo ' - not an STM32F4, F7, or H7.'
     echo ' - aborting.'
-    rm -r "${dest}"
-    exit
+    abort_cleanup
+    exit 1
 fi
 
 # enable flash and drivers
@@ -431,7 +419,6 @@ echo 'skipping any VTX RTC6705; please manually modify target.mk if necessary.'
 # drivers/vtx_rtc6705_soft_spi.c \
 
 # led_strip
-translate LED_STRIP "${config}" 'drivers/light_led.h \' "${mkFile}"
 translate LED_STRIP "${config}" 'drivers/light_ws2811strip.c \' "${mkFile}"
 # no good ? -- translate LED_STRIP ${config} 'drivers/light_ws2811strip_hal.c \' ${mkFile}
 
@@ -456,163 +443,8 @@ echo 'drivers/max7456.c \' >> "${mkFile}"
 # echo 'drivers/compass/compass_qmc5883l.c \' >> ${mkFile}
 
 echo '' >> "${mkFile}"
-echo '# notice - this file was programmatically generated and may be incomplete.' >> "${mkFile}"
-echo '' >> "${mkFile}"
 echo "# ${generatedMessage}" >> "${mkFile}"
 echo "# ${generatedSHA}" >> "${mkFile}"
-
-# create target.c file
-echo "building ${cFile}"
-
-echo "${license}" > "${cFile}"
-echo "// ${generatedMessage}" >> "${cFile}"
-echo "// ${generatedSHA}" >> "${cFile}"
-echo '' >> "${cFile}"
-
-echo '#include <stdint.h>' >> "${cFile}"
-echo '#include "platform.h"' >> "${cFile}"
-echo '#include "drivers/io.h"' >> "${cFile}"
-echo '#include "drivers/dma.h"' >> "${cFile}"
-echo '#include "drivers/timer.h"' >> "${cFile}"
-echo '#include "drivers/timer_def.h"' >> "${cFile}"
-echo '' >> "${cFile}"
-
-# DEF_TIM (from TIMER_PIN_MAP in config.h + lookup tables)
-echo 'building DEF_TIM'
-
-# Parse TIMER_PIN_MAP entries: TIMER_PIN_MAP(idx, PIN, occurrence, dmaopt)
-# Store as parallel arrays: tpmPin[], tpmOcc[], tpmDma[]
-tpmPin=()
-tpmOcc=()
-tpmDma=()
-# Extract continuation lines of TIMER_PIN_MAPPING into one stream, then parse each TIMER_PIN_MAP()
-while IFS= read -r mapline; do
-    rawPin=$(echo "$mapline" | sed 's/.*TIMER_PIN_MAP([^,]*, *\([A-Z][A-Z0-9_]*\).*/\1/')
-    pin=$(resolvePinMacro "$rawPin")
-    occ=$(echo  "$mapline" | sed 's/.*TIMER_PIN_MAP([^,]*, *[^,]*, *\([0-9]*\).*/\1/')
-    dopt=$(echo "$mapline" | sed 's/.*TIMER_PIN_MAP([^,]*, *[^,]*, *[^,]*, *\(-\?[0-9]*\).*/\1/')
-    tpmPin+=("$pin")
-    tpmOcc+=("$occ")
-    tpmDma+=("$dopt")
-done < <(grep 'TIMER_PIN_MAP(' "$config" | grep -v '^\s*//')
-
-tpmCount=${#tpmPin[@]}
-echo "timerCount: $tpmCount"
-
-# Derive motor count from config.h motor pin defines
-motorsCount=0
-for n in 1 2 3 4 5 6 7 8; do
-    grep -q -m1 "MOTOR${n}_PIN" "$config" && motorsCount=$n
-done
-echo "motorsCount: $motorsCount"
-
-# EmuF TIM_USE_ options:
-# TIM_USE_ANY
-# TIM_USE_BEEPER
-# TIM_USE_LED
-# TIM_USE_MOTOR
-# TIM_USE_NONE
-# TIM_USE_PPM
-# TIM_USE_PWM
-# TIM_USE_SERVO
-# TIM_USE_TRANSPONDER
-
-# Emit DEF_TIM entries from TIMER_PIN_MAP + lookup tables
-echo 'const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {' >> "${cFile}"
-for (( i = 0; i < tpmCount; i++ )); do
-    pin="${tpmPin[$i]}"
-    occ="${tpmOcc[$i]}"
-    dopt="${tpmDma[$i]}"
-
-    # Look up TIM + CH via lookup table
-    timch="${timerLookup[${pin}_${occ}]}"
-    if [[ -z "$timch" ]]; then
-        echo " - notice: no timer lookup for ${pin} occurrence ${occ}; using TIM_USE_ANY"
-        timchOut="UNKNOWN_TIM, UNKNOWN_CH"
-    else
-        timchOut="${timch//:/, }"
-    fi
-
-    # Determine TIM_USE from pin role defines in config.h
-    comment=""
-    timUse="TIM_USE_ANY"
-    if [[ -n "${motorPins[$pin]+_}" ]]; then
-        motorN="${motorPins[$pin]}"
-        timUse="TIM_USE_MOTOR"
-        comment="motor ${motorN}"
-        echo "building DEF_TIM for motor ${motorN} : ${pin}"
-    elif [[ -n "${servoPins[$pin]+_}" ]]; then
-        servoN="${servoPins[$pin]}"
-        timUse="TIM_USE_SERVO"
-        comment="servo ${servoN}"
-        echo "building DEF_TIM for servo ${servoN} : ${pin}"
-    elif [[ -n "$ppmPin" && "$pin" == "$ppmPin" ]]; then
-        timUse="TIM_USE_PPM"
-        comment="ppm"
-        echo "building DEF_TIM for ppm : ${pin}"
-    elif [[ -n "$ledPin" && "$pin" == "$ledPin" ]]; then
-        timUse="TIM_USE_LED"
-        comment="led strip"
-        echo "building DEF_TIM for led : ${pin}"
-    elif [[ -n "$camPin" && "$pin" == "$camPin" ]]; then
-        timUse="TIM_USE_ANY"
-        comment="cam ctrl"
-        echo "building DEF_TIM for cam : ${pin}"
-    else
-        comment="could not determine TIM_USE_xxxxx - please check"
-        echo "building DEF_TIM for pin : ${pin} (role unknown)"
-    fi
-
-    # dmaopt -1 means no DMA (e.g. input capture only)
-    if [[ "$dopt" == "-1" ]]; then
-        dopt="0"
-        comment+="; dma -1 in config (input only)"
-    fi
-
-    # H7 DEF_TIM requires a 7th argument (upopt: TIM_UP burst stream pool index, NONE = burst disabled)
-    if [[ "$mcu" == STM32H7* ]]; then
-        upopt="NONE"
-        timNum=$(echo "$timchOut" | sed -n 's/TIM\([0-9]\+\),.*/\1/p')
-        if [[ -n "$timNum" ]]; then
-            upoptVal=$(grep -m1 "TIMUP${timNum}_DMA_OPT" "$config" | awk '{print $3}')
-            if [[ -n "$upoptVal" && "$upoptVal" != "-1" ]]; then
-                upopt="$upoptVal"
-            fi
-        fi
-        echo "    DEF_TIM(${timchOut}, ${pin}, ${timUse}, 0, ${dopt}, ${upopt}), // ${comment}" >> "${cFile}"
-    else
-        echo "    DEF_TIM(${timchOut}, ${pin}, ${timUse}, 0, ${dopt}), // ${comment}" >> "${cFile}"
-    fi
-done
-echo '};' >> "${cFile}"
-
-echo '' >> "${cFile}"
-echo '// notice - this file was programmatically generated and may be incomplete.' >> "${cFile}"
-
-# timers.txt file for quick reference
-echo '// timers for target.c' > "${tFile}"
-echo '// format : DEF_TIM(TIMxx, CHx, Pxx, TIM_USE_xxxxxxx, 0, x), //comment' >> "${tFile}"
-echo '' >> "${tFile}"
-echo 'TIM_USE options:' >> "${tFile}"
-echo 'TIM_USE_ANY' >> "${tFile}"
-echo 'TIM_USE_BEEPER' >> "${tFile}"
-echo 'TIM_USE_LED' >> "${tFile}"
-echo 'TIM_USE_MOTOR' >> "${tFile}"
-echo 'TIM_USE_NONE' >> "${tFile}"
-echo 'TIM_USE_PPM' >> "${tFile}"
-echo 'TIM_USE_PWM' >> "${tFile}"
-echo 'TIM_USE_SERVO' >> "${tFile}"
-echo 'TIM_USE_TRANSPONDER' >> "${tFile}"
-echo '' >> "${tFile}"
-echo '// config.h timers' >> "${tFile}"
-grep "MOTOR[[:digit:]]\+_PIN" "$config" | xargs -d'\n' --replace echo "{}" >> "${tFile}"
-echo '' >> "${tFile}"
-grep TIMER_PIN_MAP "$config" | xargs -d'\n' --replace echo "{}" >> "${tFile}"
-echo '' >> "${tFile}"
-echo '// TIMER_PIN_MAP from config.h' >> "${tFile}"
-echo '// format: TIMER_PIN_MAP(index, pin, occurrence, dmaopt)' >> "${tFile}"
-echo '// occurrence selects which timer from the MCU timer table (see lookup/*.csv)' >> "${tFile}"
-grep 'TIMER_PIN_MAP(' "$config" | grep -v '^\s*//' | sed 's/^/    /' >> "${tFile}"
 
 # create target.h file
 echo "building ${hFile}"
@@ -629,6 +461,19 @@ grep "BOARD_NAME" "$config" >> "${hFile}"
 grep "MANUFACTURER_ID" "$config" >> "${hFile}"
 echo "#define TARGET_BOARD_IDENTIFIER \"${TBID}\"  // generic ID" >> "${hFile}" #required; this is essentially mcu-type or custom id
 grep "define FC_TARGET_MCU" "$config" | sed 's/$/     \/\/ not used in EmuF/' >> "${hFile}" # not used in EmuF
+echo '' >> "${hFile}"
+
+# timers: EmuFlight resolves timer and channel at run time from TIMER_PIN_MAPPING; copy it verbatim
+echo "building TIMER_PIN_MAPPING"
+timerMap=$(awk '/^[[:space:]]*#[[:space:]]*define[[:space:]]+TIMER_PIN_MAPPING([[:space:]]|$)/ { on = 1 }
+     on { print; if ($0 !~ /\\[[:space:]]*$/) on = 0 }' "$config")
+if [[ -z "${timerMap}" ]]; then
+    notice 'TIMER_PIN_MAPPING not found in config.h; add the timer map to target.h manually.'
+else
+    echo "${timerMap}" >> "${hFile}"
+fi
+grep -E '^[[:space:]]*#[[:space:]]*define[[:space:]]+(MOTOR[0-9]+_PIN|SERVO[0-9]+_PIN|RX_PWM[0-9]+_PIN|RX_PPM_PIN|LED_STRIP_PIN|TRANSPONDER_PIN|CAMERA_CONTROL_PIN|GYRO_[0-9]+_CLKIN_PIN|TIMUP[0-9]+_DMA_OPT)[[:space:]]' "$config" >> "${hFile}"
+# every non-literal pin the map names must be defined in target.h (checked at the end)
 echo '' >> "${hFile}"
 
 # all the USE_ definitions - includes acc, gyro, flash, max, etc
@@ -670,16 +515,13 @@ echo "building LED"
 translate 'LED[0-9]_PIN' "$config" '#define USE_LED' "${hFile}"
 grep "LED[0-9]_PIN" "$config" >> "${hFile}"
 
-if [[ $(grep 'define[[:space:]\+]LED_STRIP_PIN' "$config" >> "${hFile}") ]] ; then
-    echo '#define USE_LED_STRIP' >> "${hFile}"
-fi
+translate 'define[[:space:]]\+LED_STRIP_PIN' "$config" '#define USE_LED_STRIP' "${hFile}"
 
 # beeper, cam-control, usb
 echo "building beeper, cam, usb"
 translate 'BEEPER_' "$config" '#define USE_BEEPER' "${hFile}"
 grep 'define[[:space:]\+]BEEPER_PIN' "$config" >> "${hFile}"
 grep BEEPER_INVERTED "$config" >> "${hFile}"
-grep CAMERA_CONTROL_PIN "$config" >> "${hFile}"
 if grep -q USB_DETECT_PIN "$config" ; then
     echo '#define USE_USB_DETECT' >> "${hFile}"
     grep 'USB_DETECT_PIN' "$config" >> "${hFile}"
@@ -694,6 +536,7 @@ for i in {1..6}
 do
     translate "SPI${i}_" "$config" "#define USE_SPI_DEVICE_${i}" "${hFile}"
     grep SPI${i}_SCK_PIN "$config" >> "${hFile}"
+    grep -E "^[[:space:]]*#[[:space:]]*define[[:space:]]+SPI${i}_(TX|RX)_DMA_OPT[[:space:]]" "$config" >> "${hFile}"
     translate SPI${i}_SDI_PIN "$config" "#define SPI${i}_MISO_PIN        $(grep SPI${i}_SDI_PIN "$config" | awk '{print $3}')" "${hFile}"
     translate SPI${i}_SDO_PIN "$config" "#define SPI${i}_MOSI_PIN        $(grep SPI${i}_SDO_PIN "$config" | awk '{print $3}')" "${hFile}"
 done
@@ -1097,15 +940,16 @@ if grep -q USE_SDCARD "$config" ; then
         echo "#define USE_SDCARD_SPI" >> "${hFile}"
         grep SDCARD_SPI_CS_PIN "$config" >> "${hFile}"
         grep SDCARD_SPI_INSTANCE "$config" >> "${hFile}"
-        echo "#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4    //notice - needs validation. these are hardware dependent. known options: 2, 4, 8." >> "${hFile}"
-        echo "#define SDCARD_SPI_INITIALIZATION_CLOCK_DIVIDER 256  //notice - needs validation. these are hardware dependent. known options: 128, 256" >> "${hFile}"
+        echo "#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4" >> "${hFile}"
+        echo "#define SDCARD_SPI_INITIALIZATION_CLOCK_DIVIDER 256" >> "${hFile}"
+        notice 'SDCARD_SPI_*_CLOCK_DIVIDER values are defaults; validate on hardware (full speed: 2, 4, 8; initialization: 128, 256).'
     else
         echo "#define USE_SDCARD_SDIO" >> "${hFile}"
         if [[ "$mcu" != STM32H7* ]]; then
-            echo "//notice - NEED: #define SDIO_DMA DMAx_StreamX // please verify" >> "${hFile}"
+            notice 'SDIO: define SDIO_DMA DMAx_StreamX in target.h and verify it.'
         fi
     fi
-    echo "//notice - other sdcard defines maybe needed (rare?): SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX, SDCARD_DMA_CLK, SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG" >> "${hFile}"
+    notice 'SD card: SDCARD_DMA_STREAM_TX_FULL, SDCARD_DMA_STREAM_TX, SDCARD_DMA_CLK and SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG may be needed (rare).'
     translate "BLACKBOX_DEVICE_SDCARD" "$config" "#define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT" "${hFile}"
     grep SDCARD_DETECT_INVERTED "$config" >> "${hFile}"
     echo '' >> "${hFile}"
@@ -1129,33 +973,6 @@ translate "ADC_VBAT_PIN" "$config" "#define VBAT_ADC_PIN $(grep "ADC_VBAT_PIN" "
 translate "ADC_CURR_PIN" "$config" "#define CURRENT_METER_ADC_PIN $(grep "ADC_CURR_PIN" "$config" | awk '{print          $3}')" "${hFile}"
 translate "ADC_RSSI_PIN" "$config" "#define RSSI_ADC_PIN $(grep "ADC_RSSI_PIN" "$config" | awk '{print          $3}')" "${hFile}"
 grep "ADC[[:digit:]]_DMA_OPT" "$config" >> "${hFile}"
-# Resolve ADCn_DMA_OPT -> DMA stream using lookup table
-for i in {1..5}
-do
-    dmaOpt=$(grep -m1 "ADC${i}_DMA_OPT" "$config" | awk '{print $3}')
-    if [[ -n "$dmaOpt" ]]; then
-        if [[ "$mcu" == STM32H7* ]]; then
-            # H7: dmaopt is a pool stream index (0-7 = DMA1_S0..S7, 8-15 = DMA2_S0..S7)
-            if (( dmaOpt >= 0 && dmaOpt <= 7 )); then
-                echo "#define ADC${i}_DMA_STREAM DMA1_Stream${dmaOpt} // ADC${i} opt${dmaOpt}" >> "${hFile}"
-            elif (( dmaOpt >= 8 && dmaOpt <= 15 )); then
-                echo "#define ADC${i}_DMA_STREAM DMA2_Stream$((dmaOpt - 8)) // ADC${i} opt${dmaOpt}" >> "${hFile}"
-            else
-                echo "// #define ADC${i}_DMA_STREAM // notice - ADC${i} opt${dmaOpt} out of range for H7" >> "${hFile}"
-            fi
-        else
-            adcLookup=$(grep -m1 "^${i},${dmaOpt}," "${scriptDir}/lookup/f4f7_dma_adc.csv" 2>/dev/null)
-            if [[ -n "$adcLookup" ]]; then
-                ctrl=$(echo "$adcLookup" | awk -F',' '{print $3}')
-                stream=$(echo "$adcLookup" | awk -F',' '{print $4}')
-                echo "#define ADC${i}_DMA_STREAM DMA${ctrl}_Stream${stream} // ADC${i} opt${dmaOpt}" >> "${hFile}"
-            else
-                echo "#define ADC${i}_DMA_STREAM DMA2_Stream0 // notice - ADC${i} opt${dmaOpt} not resolved; please verify" >> "${hFile}"
-            fi
-        fi
-    fi
-done
-echo ' - please verify ADC DMA Streams.'
 grep "DEFAULT_VOLTAGE_METER_SOURCE" "$config" >> "${hFile}"
 scale=$(grep "DEFAULT_VOLTAGE_METER_SCALE" "$config" | awk '{print $3}')
 [[ -n "$scale" ]] && echo "#define DEFAULT_VOLTAGE_METER_SCALE $scale" >> "${hFile}"
@@ -1177,7 +994,6 @@ fi
 ## esc serial timer
 echo "building ESC"
 if grep -q ESCSERIAL "$config" ; then
-    echo '#define USE_ESCSERIAL' >> "${hFile}"
     translate "ESCSERIAL_PIN" "$config" "#define ESCSERIAL_TIMER_TX_PIN $(grep "ESCSERIAL_PIN" "$config" | awk '{print          $3}')" "${hFile}"
     echo '' >> "${hFile}"
 fi
@@ -1199,61 +1015,19 @@ fi
 
 echo '' >> "${hFile}"
 
-# port masks
-echo "building port masks"
-
-# Compute per-port bitmasks by scanning every P[A-K][0-9]{1,2} token in config.h.
-# Each bit N in TARGET_IO_PORTx represents pin N (0-15): (1 << N).
-# H7 uses ports up to K; F4/F7 typically use up to H. Unused ports are skipped.
-declare -A portMask
-while IFS= read -r pinToken; do
-    port="${pinToken:1:1}"
-    num="${pinToken:2}"
-    portMask[$port]=$(( ${portMask[$port]:-0} | (1 << num) ))
-done < <(grep -oE '\bP[A-K][0-9]{1,2}\b' "$config" | sort -u)
-
-for port in A B C D E F G H I J K; do
-    mask="${portMask[$port]}"
-    if [[ -n "$mask" && "$mask" -ne 0 ]]; then
-        # Single-pin port (mask is a power of 2): emit exact BIT(n).
-        # Multi-pin port: emit 0xffff so future pin additions never require mask edits.
-        if (( (mask & (mask - 1)) == 0 )); then
-            pin_num=0; while (( (1 << pin_num) != mask )); do (( pin_num++ )); done
-            printf '#define TARGET_IO_PORT%s (BIT(%d))\n' "$port" "$pin_num" >> "${hFile}"
-        else
-            printf '#define TARGET_IO_PORT%s 0xffff\n' "$port" >> "${hFile}"
-        fi
-    fi
-done
-echo '// notice - port masks derived from config.h; single-pin ports use exact mask, multi-pin ports use 0xffff' >> "${hFile}"
-echo '' >> "${hFile}"
 
 echo "building static default FEATURES"
-echo " - please modify as fit."
-echo "#define DEFAULT_FEATURES       (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_AIRMODE | ${featureRX})" >> "${hFile}"
+# EmuFlight ORs FEATURE_OSD, FEATURE_TELEMETRY and FEATURE_AIRMODE into every reset; copy only the reference config's own list
+awk '/^[[:space:]]*#[[:space:]]*define[[:space:]]+DEFAULT_FEATURES[[:space:]]/ { on = 1 }
+     on { print; if ($0 !~ /\\[[:space:]]*$/) on = 0 }' "$config" >> "${hFile}"
 echo "#define DEFAULT_RX_FEATURE     ${featureRX}" >> "${hFile}"
 echo '' >> "${hFile}"
 
-# used timers: derive from TIMER_PIN_MAP lookup results
-echo "building USED_TIMERS"
-declare -A usedTimNums
-for (( i = 0; i < tpmCount; i++ )); do
-    pin="${tpmPin[$i]}"; occ="${tpmOcc[$i]}"
-    timch="${timerLookup[${pin}_${occ}]}"
-    [[ -n "$timch" ]] && usedTimNums["${timch%%:*}"]=1
-done
-usedTimers=''
-for t in $(echo "${!usedTimNums[@]}" | tr ' ' '\n' | sort -V); do
-    num="${t#TIM}"
-    [[ $usedTimers != '' ]] && usedTimers+="|"
-    usedTimers+=" TIM_N(${num}) "
-done
-echo "#define USABLE_TIMER_CHANNEL_COUNT $(grep 'TIMER_PIN_MAP(' "${config}" | grep -cv '^\s*//')" >> "${hFile}"
-# to do: logic
-echo "#define USED_TIMERS (${usedTimers})" >> "${hFile}"
-echo '' >> "${hFile}"
 
-echo '// notice - this file was programmatically generated and may be incomplete.' >> "${hFile}"
+# a TIMER_PIN_MAP row naming an undefined macro breaks the build
+for tok in $(echo "${timerMap}" | grep -oE 'TIMER_PIN_MAP\([^,]*,[^,]*,' | awk -F, '{gsub(/[[:space:]]/, "", $2); print $2}' | grep -vE '^P[A-I][0-9]+$' | sort -u); do
+    grep -qE "define[[:space:]]+${tok}[[:space:]]" "${hFile}" || notice "TIMER_PIN_MAPPING names ${tok}, which target.h does not define."
+done
 
 echo 'cleaning files'
 sed '/"TODO"/d' -i "${hFile}"
@@ -1262,7 +1036,12 @@ awk -i inplace '!(NF && seen[$0]++)' "${mkFile}" # deduplicate, but skip empty l
 
 echo ''
 echo 'Task finished. No guarantees; Definitions are likely incomplete.'
-echo 'Please search the resultant files for the keyword "notice" to rectify any needs.'
+if [[ -s "${openItems}" ]]; then
+    echo "Open items: ${openItems}"
+    cat "${openItems}"
+else
+    rm -f "${openItems}"
+fi
 echo 'Please cleanup target files before Pull-Requesting.'
 echo ''
 echo "Folder: ${dest}"

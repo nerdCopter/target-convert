@@ -43,4 +43,4 @@ Check: port masks match convention (`0xffff` multi-pin, `(BIT(n))` single-pin), 
 
 ## Scope
 
-This repo converts Betaflight `config.h` files to EmuFlight target files. Changes are limited to `convert.sh` and `lookup/*.csv`. Do not modify EmuFlight source directly.
+This repo converts Betaflight `config.h` files to EmuFlight target files. Changes are limited to `convert.sh` and the docs. Do not modify EmuFlight source directly.
