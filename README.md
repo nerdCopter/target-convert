@@ -16,6 +16,7 @@
 * This BASH script expects one required parameter and one optional parameter:
   * [targetName] — the Betaflight config target name (e.g. `TUNERCF405`). No vendor prefix needed.
   * [destination-folder] — optional POSIX path; defaults to `./` if omitted.
+  * `-f`/`--force` — optional; overwrite an existing `[destination-folder]/[targetName]`. Without it the script aborts when that folder exists, so a hand-tuned target is never replaced.
 
 #### Examples:
 * `./convert.sh TUNERCF405`
@@ -24,8 +25,8 @@
 * `./convert.sh SPEEDYBEE_F745_AIO ../EmuFlight/src/main/target/`
 
 #### Outputs:
-* Creates a target-folder in the format `TARGETNAME` containing `target.mk`, `target.c`, `target.h`.
-* This folder also contains a sub-folder named `resources` which containing downloads and other output.
+* Creates a target-folder in the format `TARGETNAME` containing `target.mk` and `target.h`. `TIMER_PIN_MAPPING`, the named pin macros and the `*_DMA_OPT` values are copied verbatim from the reference `config.h`; no `target.c` is written.
+* This folder also contains a sub-folder named `resources` which holds the downloaded `config.h` and `open-items.txt` (the list of defines to complete or verify by hand).
 
 #### How to compile:
 * Copy or move the new target folder to your EmuFlight's `./src/main/target/` folder.
@@ -37,6 +38,7 @@
 #### Pull-Requests to EmuFlight:
 * When making Pull-Requests to EmuFlight, do not include the `resources` sub-folder folder nor its contents. PR's should only include `TARGETNAME/target.*`.
 * Remove all unnecessary comments from the target files.
+* Do not copy a conversion over an existing target folder.
 * `BOARD_NAME`/`MANUFACTURER_ID` in `target.h` drive live EF behavior (top-priority board-identity source, and the `USBD_PRODUCT_STRING` fallback when not explicitly set). If you hand-edit `USBD_PRODUCT_STRING` or `TARGET_MANUFACTURER_IDENTIFIER` after conversion, update `BOARD_NAME`/`MANUFACTURER_ID` to match, or the two will silently diverge.
 
 #### Updating this script:

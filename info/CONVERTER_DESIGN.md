@@ -17,75 +17,45 @@ The old `betaflight/unified-targets` repo (`.config` files, `VEND-TARGETNAME` fo
 ## Input format
 
 ```
-./convert.sh <TARGETNAME> [outputFolder]
+./convert.sh [-f|--force] <TARGETNAME> [outputFolder]
 ```
 
 - `TARGETNAME` = bare board name; must be unique in `betaflight/config/configs/` (enforced repo-wide by upstream)
 - `outputFolder` = optional, defaults to `./`
+- An existing `outputFolder/TARGETNAME` aborts the run unless `--force` is given
 - Previously required `VEND-TARGETNAME` format (e.g. `TURC-TUNERCF405`) — no longer needed, and not to be confused with the `<MANUFACTURER_ID>` directory betaflight/config now uses internally
-
-## Lookup tables (lookup/*.csv)
-
-CSV format: comma-separated, `#` comment lines skipped.
-
-### Timer hardware tables (`f4_timer_hw.csv`, `f7_timer_hw.csv`, `h7_timer_hw.csv`)
-
-```
-# pin,occurrence,TIM,CH
-PA0,1,TIM2,CH1
-PA0,2,TIM5,CH1
-```
-
-- `occurrence` = which timer this pin maps to in priority order (matches the occurrence index in Betaflight's `TIMER_PIN_MAP`)
-- Generated from `timer_stm32f4xx.c` / `timer_stm32f7xx.c` / `timer_stm32h7xx.c` in the Betaflight source
-- Key in associative array: `PIN_occurrence` → `TIMx:CHy`
-- H7 note: TIM9/TIM10/TIM11 are absent on H7; TIM15/TIM16/TIM17 are present instead
-
-### DMA tables (`f4f7_dma_adc.csv`, `f4f7_dma_timer.csv`, `f4f7_dma_spi.csv`)
-
-```
-# ADCdev,opt,ctrl,stream,channel
-1,0,2,0,0
-```
-
-- `opt` = dmaopt value from `TIMER_PIN_MAP` or `ADCn_DMA_OPT` in config.h
-- `ctrl`/`stream`/`channel` = DMA controller number, stream, channel
-
-### Generating/updating lookup tables
-
-See `tools/gen_lookup_tables.sh` — requires a local Betaflight source tree.
 
 ## MCU family routing
 
-| Betaflight MCU | Timer CSV | `TARGET_BOARD_IDENTIFIER` | Make target group |
-|---|---|---|---|
-| STM32F405 | `f4_timer_hw.csv` | `S405` | `F405_TARGETS` |
-| STM32F411 | `f4_timer_hw.csv` | `S411` | `F411_TARGETS` |
-| STM32F446 | `f4_timer_hw.csv` | `S446` | `F446_TARGETS` |
-| STM32F7X2/F722 | `f7_timer_hw.csv` | `S7X2` | `F7X2RE_TARGETS` |
-| STM32F745 | `f7_timer_hw.csv` | `S745` | `F7X5XG_TARGETS` |
-| STM32H723/H725 | `h7_timer_hw.csv` | `SH72` | `H723_TARGETS` |
-| STM32H730 | `h7_timer_hw.csv` | `S730` | `H730_TARGETS` |
-| STM32H743 | `h7_timer_hw.csv` | `SH74` | `H743_TARGETS` |
-| STM32H750 | `h7_timer_hw.csv` | `S750` | `H750_TARGETS` |
+| Betaflight MCU | `TARGET_BOARD_IDENTIFIER` | Make target group |
+|---|---|---|
+| STM32F405 | `S405` | `F405_TARGETS` |
+| STM32F411 | `S411` | `F411_TARGETS` |
+| STM32F446 | `S446` | `F446_TARGETS` |
+| STM32F7X2/F722 | `S7X2` | `F7X2RE_TARGETS` |
+| STM32F745 | `S745` | `F7X5XG_TARGETS` |
+| STM32H723/H725 | `SH72` | `H723_TARGETS` |
+| STM32H730 | `S730` | `H730_TARGETS` |
+| STM32H743 | `SH74` | `H743_TARGETS` |
+| STM32H750 | `S750` | `H750_TARGETS` |
 
-## Timer resolution (TIMER_PIN_MAP)
+## Timers (TIMER_PIN_MAPPING)
 
-Betaflight `config.h` contains:
+EmuFlight resolves timer and channel at run time from `TIMER_PIN_MAPPING`; the converter does no timer lookup. Betaflight `config.h` contains:
 ```c
 #define TIMER_PIN_MAPPING \
     TIMER_PIN_MAP(0, PA9,  1, -1) \
     TIMER_PIN_MAP(1, PA8,  1,  0)
 ```
 
-Format: `TIMER_PIN_MAP(index, PIN, occurrence, dmaopt)`
+Format: `TIMER_PIN_MAP(index, PIN, occurrence, dmaopt)`. `occurrence` indexes all timer options of that pin on the MCU, not a channel number.
 
-The converter:
-1. Filters comment lines (`^\s*//`) — some configs include a `// TIMER_PIN_MAP(...)` header comment that matches the grep pattern
-2. Resolves macro pin names — H7 targets (and some others) use macro names like `MOTOR1_PIN` instead of literal pin values like `PC6`; the converter looks up `#define MACRONAME PIN` in config.h before doing the timer table lookup
-3. Looks up `PIN + occurrence` in the timer CSV to get `TIMx:CHy`
-4. Determines `TIM_USE_*` role from pin's define in config.h (MOTOR1..8_PIN → `TIM_USE_MOTOR`, SERVO1..4_PIN → `TIM_USE_SERVO`, PPM_PIN → `TIM_USE_PPM`, LED_STRIP_PIN → `TIM_USE_LED`, CAMERA_CONTROL_PIN → `TIM_USE_ANY`)
-5. Emits `DEF_TIM(TIMx, CHy, PIN, TIM_USE_xxx, 0, dmaopt)` in `target.c`
+The converter copies into `target.h`:
+1. The whole `TIMER_PIN_MAPPING` block, unchanged (`dmaopt` values including `-1`, row comments, continuation lines).
+2. The named pin macros the reference defines: `MOTORn_PIN`, `SERVOn_PIN`, `RX_PWMn_PIN`, `RX_PPM_PIN`, `LED_STRIP_PIN`, `TRANSPONDER_PIN`, `CAMERA_CONTROL_PIN`, `GYRO_n_CLKIN_PIN` (a `TIMER_PIN_MAP` row may name it).
+3. `TIMUPn_DMA_OPT`, `ADCn_DMA_OPT`, `SPIn_TX_DMA_OPT` and `SPIn_RX_DMA_OPT`.
+
+It writes no `timerHardware[]`, `target.c`, `USED_TIMERS`, `USABLE_TIMER_CHANNEL_COUNT` or `TARGET_IO_PORTx`. EmuFlight master raises `#error` for a positive `USABLE_TIMER_CHANNEL_COUNT` and defaults every port mask to `0xffff`. The reference `dmaopt` values win, including any DMA stream collision they carry.
 
 ## GYRO SPI naming
 
@@ -106,17 +76,17 @@ The converter translates these automatically.
 | File | Description |
 |------|-------------|
 | `TARGETNAME/target.mk` | Build system: MCU target group, VCP/flash features, driver sources |
-| `TARGETNAME/target.c` | Timer hardware array (`timerHardware[]`) with `DEF_TIM()` entries |
 | `TARGETNAME/target.h` | All `#define` pin/feature definitions |
 | `TARGETNAME/resources/config.h` | Downloaded Betaflight config (reference) |
-| `TARGETNAME/resources/timers.txt` | Human-readable timer summary (reference) |
+| `TARGETNAME/resources/open-items.txt` | Defines to complete or verify by hand (written only when non-empty) |
 
 ## Known limitations / manual review required
 
 - Dual-gyro targets: GYRO_1/GYRO_2 pin assignments may need validation; quad-gyro targets (e.g. STELLARH7DEV) require post-convert manual reduction to the one EmuFlight-supported gyro
-- H7 ADC DMA streams: not resolved — H7 uses DMAMUX (no fixed opt→stream mapping); output includes "please verify" notices
+- DMA options are copied from the reference; check each DMA stream for collisions after conversion
 - SPI RX (ELRS, FrSky): partially automated, manual completion needed
 - VTX RTC6705: skipped entirely, add manually if needed
 - GPS: skipped
 - Some rare peripheral combinations not accounted for
-- Always search output files for the keyword `notice` to find items needing manual attention
+- Read `resources/open-items.txt` for items needing manual attention; target files carry no `notice` comments
+- `DEFAULT_FEATURES` is copied from the reference only; EmuFlight already adds OSD, telemetry and airmode

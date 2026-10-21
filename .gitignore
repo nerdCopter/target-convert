@@ -9,8 +9,6 @@
 !convert.sh
 !info/
 !info/*
-!lookup/
-!lookup/*
 !tools/
 !tools/*
 !.github/
