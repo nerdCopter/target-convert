@@ -420,12 +420,7 @@ echo 'skipping any VTX RTC6705; please manually modify target.mk if necessary.'
 # drivers/vtx_rtc6705.c \
 # drivers/vtx_rtc6705_soft_spi.c \
 
-# led_strip
-translate LED_STRIP "${config}" 'drivers/light_ws2811strip.c \' "${mkFile}"
-# no good ? -- translate LED_STRIP ${config} 'drivers/light_ws2811strip_hal.c \' ${mkFile}
-
-# pinio
-translate PINIO "${config}" 'drivers/pinio.c \' "${mkFile}"
+# led_strip and pinio sources are in EmuFlight's common source list; nothing to list per board
 
 # OSD is final driver
 echo 'drivers/max7456.c \' >> "${mkFile}"
